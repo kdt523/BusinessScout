@@ -61,6 +61,20 @@ class _MapboxMapWidgetState extends State<MapboxMapWidget> {
     }
   }
 
+  @override
+  void didUpdateWidget(covariant MapboxMapWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.accessToken != oldWidget.accessToken ||
+        widget.lat != oldWidget.lat ||
+        widget.lng != oldWidget.lng ||
+        widget.zones != oldWidget.zones) {
+      if (!kIsWeb && widget.accessToken.isNotEmpty) {
+        final htmlContent = _buildMapHtml();
+        _controller.loadHtmlString(htmlContent, baseUrl: 'https://api.mapbox.com');
+      }
+    }
+  }
+
   String _buildMapHtml() {
     final String zonesJson = json.encode(widget.zones ?? []);
     return '''
