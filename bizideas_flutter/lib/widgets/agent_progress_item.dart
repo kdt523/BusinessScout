@@ -24,6 +24,7 @@ class AgentProgressItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeColor = isWorking ? const Color(0xFFFF187F) : color;
     Color cardBg;
     Border border;
     List<BoxShadow> shadows = [];
@@ -39,11 +40,11 @@ class AgentProgressItem extends StatelessWidget {
         )
       ];
     } else if (isWorking) {
-      cardBg = color.withOpacity(0.08);
-      border = Border.all(color: color.withOpacity(0.7), width: 1.4);
+      cardBg = themeColor.withOpacity(0.08);
+      border = Border.all(color: themeColor.withOpacity(0.7), width: 1.4);
       shadows = [
         BoxShadow(
-          color: color.withOpacity(0.12),
+          color: themeColor.withOpacity(0.12),
           blurRadius: 10,
           spreadRadius: 1,
         )
@@ -83,14 +84,14 @@ class AgentProgressItem extends StatelessWidget {
                   color: isDone
                       ? const Color(0xFFDCFCE7)
                       : isWorking
-                          ? color.withOpacity(0.15)
+                          ? themeColor.withOpacity(0.15)
                           : const Color(0xFFF1F5F9),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isDone
                         ? const Color(0xFF86EFAC)
                         : isWorking
-                            ? color.withOpacity(0.5)
+                            ? themeColor.withOpacity(0.5)
                             : const Color(0xFFE2E8F0),
                     width: 1.0,
                   ),
@@ -101,13 +102,13 @@ class AgentProgressItem extends StatelessWidget {
                   color: isDone
                       ? const Color(0xFF10B981)
                       : isWorking
-                          ? color
+                          ? themeColor
                           : const Color(0xFF64748B),
                 ),
               ),
               const Spacer(),
               if (isWorking)
-                _TypingDots(color: color)
+                _TypingDots(color: themeColor)
               else
                 Icon(
                   isDone ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -138,7 +139,7 @@ class AgentProgressItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: isWorking
-                      ? color
+                      ? themeColor
                       : isDone
                           ? const Color(0xFF15803D).withOpacity(0.8)
                           : const Color(0xFF64748B),

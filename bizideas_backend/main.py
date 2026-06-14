@@ -92,6 +92,8 @@ async def add_message(room_id: str, payload: MessagePayload):
         await room.add_participant(payload.sender)
     else:
         await room.post_text(payload.sender, payload.role, payload.content, payload.data)
+        if USE_SIMULATOR and (payload.role == "user" or payload.sender.lower() == "user"):
+            asyncio.create_task(trigger_agent_reply_task(room_id, payload.content))
     return {"status": "success"}
 
 @app.post("/api/rooms/create")
@@ -305,6 +307,127 @@ async def list_reports():
 def json_dumps(data: Any) -> str:
     import json
     return json.dumps(data)
+
+async def trigger_agent_reply_task(room_id: str, user_content: str):
+    # Determine which agent was mentioned
+    mentioned_agent = None
+    lower_content = user_content.lower()
+    
+    # 1. Match custom handles defined in AGENT_HANDLES
+    from band_bridge import AGENT_HANDLES
+    for agent_name, handle in AGENT_HANDLES.items():
+        h_low = handle.lower().strip()
+        if f"@{h_low}" in lower_content or h_low in lower_content:
+            mentioned_agent = agent_name
+            break
+            
+    # 2. Fallback to keyword matching
+    if not mentioned_agent:
+        if any(x in lower_content for x in ("@orchestrator", "@coordinator", "@main", "@lead")):
+            mentioned_agent = "Orchestrator"
+        elif any(x in lower_content for x in ("@locationscout", "@location", "@scout", "@geo", "@gis")):
+            mentioned_agent = "Location Scout"
+        elif any(x in lower_content for x in ("@competitoranalyst", "@competitor", "@analyst", "@saturation")):
+            mentioned_agent = "Competitor Analyst"
+        elif any(x in lower_content for x in ("@businessplanner", "@business", "@planner", "@strategy", "@plan", "@finance")):
+            mentioned_agent = "Business Planner"
+    
+    # Default to Orchestrator if no agent is explicitly mentioned
+    if not mentioned_agent:
+        mentioned_agent = "Orchestrator"
+
+    # Instantiate the agent class
+    agent_instance = None
+    try:
+        if mentioned_agent == "Orchestrator":
+            from agents.orchestrator import OrchestratorAgent
+            agent_instance = OrchestratorAgent()
+        elif mentioned_agent == "Location Scout":
+            from agents.location_scout import LocationScoutAgent
+            agent_instance = LocationScoutAgent()
+        elif mentioned_agent == "Competitor Analyst":
+            from agents.competitor_analyst import CompetitorAnalystAgent
+            agent_instance = CompetitorAnalystAgent()
+        elif mentioned_agent == "Business Planner":
+            from agents.business_planner import BusinessPlannerAgent
+            agent_instance = BusinessPlannerAgent()
+    except Exception as e:
+        logger.error(f"Failed to instantiate agent {mentioned_agent}: {e}")
+        return
+
+    if not agent_instance:
+        return
+
+    # Post a "thinking" status message
+    await asyncio.sleep(0.5)
+    room = await simulator.get_or_create_room(room_id)
+    status_msg = await room.post_status(f"@{mentioned_agent} is formulating a response...")
+    
+    try:
+        # Gather context from previous room messages to feed to LLM
+        history_msgs = room.get_history()
+        
+        # Build conversation thread for the LLM
+        thread_lines = []
+        for m in history_msgs[-12:]: # Last 12 messages for concise context
+            if m.get("type") == "text":
+                thread_lines.append(f"{m.get('sender')} ({m.get('role')}): {m.get('content')}")
+        
+        conversation_context = "\n".join(thread_lines)
+        
+        # Extract general project context (business type, city) from the first message
+        project_brief = ""
+        for m in history_msgs:
+            if m.get("sender") == "User" and "start a" in m.get("content", "").lower():
+                project_brief = m.get("content")
+                break
+
+        system_instruction = (
+            f"You are the {mentioned_agent} of a multi-agent business feasibility scouting system.\n"
+            f"Your role is: {agent_instance.role}.\n"
+            f"You are participating in an interactive follow-up conversation in the room. The user is asking questions, requesting alternatives, or details.\n"
+            f"Provide a helpful, precise response based on your expertise. Be brief (max 2-3 paragraphs).\n"
+            f"Reference local data, traffic, saturation, or competitor details if relevant to your role.\n"
+            f"Do NOT make up data; if you don't know, suggest checking with other agents or propose realistic options."
+        )
+        
+        prompt = (
+            f"Project Brief Context: {project_brief}\n\n"
+            f"Recent Conversation History:\n{conversation_context}\n\n"
+            f"User's Question: {user_content}\n\n"
+            f"Please write your direct response to the user as {mentioned_agent}."
+        )
+        
+        # Call the agent's LLM
+        llm_response = await agent_instance.call_llm(prompt, system_instruction)
+        
+        if not llm_response:
+            # Fallback response if LLM failed
+            llm_response = (
+                f"Hello! I am the **{mentioned_agent}**. I received your question about '{user_content}'. "
+                f"I am happy to look into alternatives or provide more details on this. "
+                f"Could you please specify if you'd like to look at alternative geographic locations, "
+                f"additional competitor metrics, or adjustments to the financial projections?"
+            )
+            
+        # Post the response
+        await room.post_text(
+            sender=mentioned_agent,
+            role="agent",
+            content=llm_response,
+            data={"diagnostics": agent_instance.last_call_diagnostics}
+        )
+    except Exception as e:
+        logger.error(f"Error generating agent response: {e}")
+        await room.post_text(
+            sender=mentioned_agent,
+            role="agent",
+            content=f"Sorry, I encountered an issue while processing your question: {e}"
+        )
+    finally:
+        # Remove the status message from the room list
+        if status_msg in room.messages:
+            room.messages.remove(status_msg)
 
 if __name__ == "__main__":
     import uvicorn

@@ -527,7 +527,6 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
                         zones: _zones,
                         primaryGold: primaryGold,
                       ),
-                      _buildAgentProgressStrip(),
                       // Latest agent status card
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -697,34 +696,6 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
     return _messages.any((msg) => msg.type == "orchestration" && msg.data['stage'] == stage);
   }
 
-  Widget _buildAgentProgressStrip() {
-    return Container(
-      height: 92,
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _agentOrder.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final agent = _agentOrder[index];
-          final state = _agentState(agent);
-          final color = _agentColor(agent);
-          final isWorking = state == "WORKING";
-          final isDone = state == "DONE";
-
-          return AgentProgressItem(
-            agent: agent,
-            state: state,
-            color: color,
-            isWorking: isWorking,
-            isDone: isDone,
-            taskLabel: _agentTaskLabel(agent),
-            icon: _agentIcon(agent),
-          );
-        },
-      ),
-    );
-  }
 
   String _agentState(String agent) {
     if (_messages.any((msg) => msg.sender == agent && msg.role != 'system')) {

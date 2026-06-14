@@ -12,268 +12,10 @@ from utils.market_profile import usd_to_local
 load_dotenv()
 logger = logging.getLogger("BrightDataClient")
 
-# High-quality local event fallbacks for sample cities to ensure offline/mock stability
-LOCAL_EVENTS_PRESETS = {
-    "naga city": [
-        {
-            "name": "Peñafrancia Festival",
-            "period": "September (Peak)",
-            "impact": "Milion-scale religious festival. Extreme surge in hospitality, food & beverage, and retail demand.",
-            "type": "Religious & Cultural"
-        },
-        {
-            "name": "Kamundagan Festival",
-            "period": "December",
-            "impact": "Month-long Christmas celebrations. Heavy night market activity and student holiday traffic.",
-            "type": "Holiday & Commerce"
-        },
-        {
-            "name": "Bicol Business Week",
-            "period": "July",
-            "impact": "Trade expos and corporate conventions bringing regional business travelers.",
-            "type": "Trade & Corporate"
-        }
-    ],
-    "legazpi": [
-        {
-            "name": "Magayon Festival",
-            "period": "May (Summer Peak)",
-            "impact": "Month-long tourism festival featuring Mt. Mayon. High demand for dining, outdoor gear, and souvenirs.",
-            "type": "Tourism & Culture"
-        },
-        {
-            "name": "Ibalong Festival",
-            "period": "August",
-            "impact": "Epic street parades and sports tournaments drawing domestic tourists and students.",
-            "type": "Historical Parade"
-        },
-        {
-            "name": "Karangahan Green Christmas",
-            "period": "December",
-            "impact": "Eco-tourism festival driving seaside food park traffic and eco-activity bookings.",
-            "type": "Holiday & Eco"
-        }
-    ],
-    "daet": [
-        {
-            "name": "Pinyasan Festival",
-            "period": "June (Mid-Year)",
-            "impact": "Celebrates Queen Formosa Pineapple. Food fairs, street dancing, and agro-exhibits boosting retail traffic.",
-            "type": "Agriculture & Food"
-        },
-        {
-            "name": "Bagasbas Beach Surf Festivals",
-            "period": "April & Summer Days",
-            "impact": "National and local surfing cups. Large influx of young travelers and sports enthusiasts.",
-            "type": "Sports & Youth Tourism"
-        },
-        {
-            "name": "Daet Town Fiesta",
-            "period": "April",
-            "impact": "Local homecoming events and traditional carnivals boosting neighborhood sales.",
-            "type": "Community Feast"
-        }
-    ]
-}
-
-LAND_MARKET_PRESETS = {
-    "naga city": {
-        "Magsaysay Avenue": {"land_php_per_sqm": 52000, "rent_php_per_sqm_month": 850},
-        "Centro (Plaza Quince Martires)": {"land_php_per_sqm": 42000, "rent_php_per_sqm_month": 650},
-        "Almeda Highway": {"land_php_per_sqm": 24000, "rent_php_per_sqm_month": 420},
-    },
-    "legazpi": {
-        "Landco Business Park": {"land_php_per_sqm": 56000, "rent_php_per_sqm_month": 900},
-        "Rawis Commercial Strip": {"land_php_per_sqm": 31000, "rent_php_per_sqm_month": 520},
-        "Legazpi Boulevard": {"land_php_per_sqm": 36000, "rent_php_per_sqm_month": 600},
-    },
-    "daet": {
-        "Vinzons Avenue": {"land_php_per_sqm": 28000, "rent_php_per_sqm_month": 460},
-        "Moreno District": {"land_php_per_sqm": 19000, "rent_php_per_sqm_month": 330},
-        "Bagasbas Beach Road": {"land_php_per_sqm": 22000, "rent_php_per_sqm_month": 380},
-    },
-}
-
-ANCHOR_PRESETS = {
-    "naga city": {
-        "magsaysay avenue": {
-            "malls": [
-                {"title": "SM City Naga", "snippet": "Large premier shopping mall located at the end of Magsaysay corridor.", "url": "", "search_query": ""},
-                {"title": "Magsaysay Square", "snippet": "Bustling retail strip and lifestyle center with food parks.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Naga City People's Mall", "snippet": "Massive public market offering fresh local goods, dry goods, and groceries.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Ateneo de Naga University (ADNU)", "snippet": "Major private Jesuit university with thousands of students, directly accessible from Magsaysay area.", "url": "", "search_query": ""},
-                {"title": "Universidad de Santa Isabel (USI)", "snippet": "Historic university offering health, education, and business courses, drawing high student foot traffic.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Naga City Science High School", "snippet": "Prestigious science high school with active student body and faculty.", "url": "", "search_query": ""},
-                {"title": "Saint Joseph School", "snippet": "Private school situated along the Magsaysay commercial path.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Magsaysay Jeepney & Tricycle Terminals", "snippet": "Active transit stop serving regional commuters and students daily.", "url": "", "search_query": ""},
-                {"title": "Naga City Central Bus Terminal", "snippet": "Main bus terminal serving inter-city routes, near the Magsaysay district.", "url": "", "search_query": ""}
-            ]
-        },
-        "centro (plaza quince martires)": {
-            "malls": [
-                {"title": "E-Mall (Nagaland E-Mall)", "snippet": "Primary digital and retail mall in Centro Naga.", "url": "", "search_query": ""},
-                {"title": "LCC Mall Naga", "snippet": "Department store and supermarket serving Centro shoppers.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Naga City People's Mall", "snippet": "Directly situated in Centro; busiest public market in the region.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "University of Nueva Caceres (UNC)", "snippet": "Large private university in Centro Naga with 10,000+ enrolled students.", "url": "", "search_query": ""},
-                {"title": "Universidad de Santa Isabel (USI)", "snippet": "Located right in Centro; major traffic anchor.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Camarines Sur National High School (CSNHS)", "snippet": "Largest national high school in the province, generating massive student foot traffic daily.", "url": "", "search_query": ""},
-                {"title": "Naga Hope Christian School", "snippet": "Private Chinese-Filipino high school in the commercial core.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Centro Jeepney Hubs & Terminals", "snippet": "Main convergence point for all jeepney routes in Centro Naga.", "url": "", "search_query": ""},
-                {"title": "Naga Philippine National Railways (PNR) Station", "snippet": "Central rail station located near Centro's commercial borders.", "url": "", "search_query": ""}
-            ]
-        },
-        "almeda highway": {
-            "malls": [
-                {"title": "Robinsons Place Naga", "snippet": "Modern three-level shopping mall situated along Almeda Highway corridor.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Del Rosario Wet & Dry Market", "snippet": "Neighborhood market serving Almeda residential communities.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Camarines Sur Polytechnic Colleges (Naga Extension)", "snippet": "Technical vocational college extension and training center.", "url": "", "search_query": ""},
-                {"title": "Bicol State College of Applied Sciences and Technology (BISCAST)", "snippet": "Prominent engineering and technology college near the Almeda boundary.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Concepcion Grande Elementary School", "snippet": "Local school hosting primary grade students near the commercial strip.", "url": "", "search_query": ""},
-                {"title": "Cararayan National High School", "snippet": "Public secondary school serving nearby residential zones.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Almeda Highway Transport Nodes", "snippet": "Major highway transit points for buses and jeepneys heading north/south.", "url": "", "search_query": ""}
-            ]
-        }
-    },
-    "legazpi": {
-        "landco business park": {
-            "malls": [
-                {"title": "Pacific Mall Legazpi", "snippet": "First major department store and shopping mall in Legazpi.", "url": "", "search_query": ""},
-                {"title": "SM City Legazpi", "snippet": "Premier shopping center adjacent to Landco Business Park.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Legazpi City Public Market", "snippet": "Central wet and dry market serving the main commercial district.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Divine Word College of Legazpi (DWCL)", "snippet": "Large private Catholic college located near Landco Business Park.", "url": "", "search_query": ""},
-                {"title": "Bicol University (BU) - Main Campus", "snippet": "The region's premier state university, drawing thousands of students to nearby zones.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "St. Agnes Academy", "snippet": "Historic private Catholic school near Landco, serving primary and secondary students.", "url": "", "search_query": ""},
-                {"title": "Legazpi City Science High School", "snippet": "Public science academy drawing high-performing students.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Legazpi Grand Central Terminal", "snippet": "Main bus, jeepney, and UV Express terminal, adjacent to Landco.", "url": "", "search_query": ""}
-            ]
-        },
-        "rawis commercial strip": {
-            "malls": [
-                {"title": "Rawis Shopping Center", "snippet": "Local community shopping plaza serving Rawis residents.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Rawis Wet and Dry Market", "snippet": "Small local market servicing neighborhood daily needs.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Bicol University College of Science & Engineering", "snippet": "Major state university campuses located along the Rawis strip.", "url": "", "search_query": ""},
-                {"title": "Mariners' Polytechnic Colleges Foundation", "snippet": "Maritime and hospitality college generating student traffic.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Rawis National High School", "snippet": "Local public high school serving student populations in Rawis.", "url": "", "search_query": ""},
-                {"title": "Bicol University Integrated Laboratory School", "snippet": "BU-run primary and secondary educational lab school.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Rawis Jeepney and Tricycle Stations", "snippet": "Active street-level transit stops for government and student commuters.", "url": "", "search_query": ""}
-            ]
-        },
-        "legazpi boulevard": {
-            "malls": [
-                {"title": "Yashano Mall Legazpi", "snippet": "Multi-story shopping center near the coastal highway access.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Dap-Dap Local Fishermen Market", "snippet": "Seafood market offering fresh catch daily near the bay.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Southern Luzon Technological College Foundation", "snippet": "Vocational and information technology college.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Oro Site High School", "snippet": "Public school serving the residential neighborhoods near the boulevard.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Legazpi Port Area", "snippet": "Maritime port and ferry terminal adjacent to the boulevard.", "url": "", "search_query": ""}
-            ]
-        }
-    },
-    "daet": {
-        "vinzons avenue": {
-            "malls": [
-                {"title": "Central Plaza Mall Daet", "snippet": "Primary commercial hub and retail mall on Vinzons Avenue.", "url": "", "search_query": ""},
-                {"title": "SM City Daet", "snippet": "Premier shopping center attracting regional shoppers.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Daet Public Market", "snippet": "Bustling central public market adjacent to the main avenue.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Mabini Colleges", "snippet": "Prominent private college on Vinzons Ave with high enrollment in education, nursing, and IT.", "url": "", "search_query": ""},
-                {"title": "Camarines Norte State College (CNSC) - Main Campus", "snippet": "State university campus situated near Vinzons, drawing thousands of students.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Daet Elementary School", "snippet": "Large primary school situated near the central avenue.", "url": "", "search_query": ""},
-                {"title": "Chun Hua High School", "snippet": "Chinese-Filipino secondary school located along Vinzons Ave.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Daet Central Terminal", "snippet": "Main transport terminal serving buses, vans, and jeepneys.", "url": "", "search_query": ""}
-            ]
-        },
-        "moreno district": {
-            "malls": [
-                {"title": "Moreno Commercial Plaza", "snippet": "Retail block and office strip in the district.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Moreno Community Market", "snippet": "Local market serving residential subdivisions.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Camarines Norte State College (Moreno Extension)", "snippet": "CNSC satellite extension and training center.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Moreno Elementary School", "snippet": "Primary school catering to local families.", "url": "", "search_query": ""},
-                {"title": "Camarines Norte National High School", "snippet": "Large national high school near the district border.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Moreno Tricycle Terminal", "snippet": "Transit hub serving local workers and hospital visitors.", "url": "", "search_query": ""}
-            ]
-        },
-        "bagasbas beach road": {
-            "malls": [
-                {"title": "Bagasbas Boulevard Retail Park", "snippet": "Outdoor lifestyle park with souvenir shops and surfing stores.", "url": "", "search_query": ""}
-            ],
-            "public_markets": [
-                {"title": "Bagasbas Fish Port Market", "snippet": "Fresh seafood market by the shore.", "url": "", "search_query": ""}
-            ],
-            "colleges_universities": [
-                {"title": "Bagasbas Surfing and Tourism Academy", "snippet": "Local vocational center for surf training and tourism studies.", "url": "", "search_query": ""}
-            ],
-            "schools": [
-                {"title": "Bagasbas Elementary School", "snippet": "Primary community school serving seaside residential areas.", "url": "", "search_query": ""}
-            ],
-            "transit_hubs": [
-                {"title": "Bagasbas Beach Tricycle & Jeepney Stop", "snippet": "Active transport node for tourists and students traveling to the beach.", "url": "", "search_query": ""}
-            ]
-        }
-    }
-}
+# Mocks and presets removed per user directive to ensure live Bright Data research
+LOCAL_EVENTS_PRESETS = {}
+LAND_MARKET_PRESETS = {}
+ANCHOR_PRESETS = {}
 
 
 class BrightDataClient:
@@ -331,16 +73,17 @@ class BrightDataClient:
         self.password = os.getenv("BRIGHTDATA_ZONE_PASSWORD")
         self.proxy_host = os.getenv("BRIGHTDATA_PROXY_HOST", "brd.superproxy.io")
         self.proxy_port = os.getenv("BRIGHTDATA_PROXY_PORT", "22225")
-        
+
         self.proxy_url = None
-        if self.customer_id and self.password:
-            # Bright Data SERP proxy URI structure
-            self.proxy_url = f"http://{self.customer_id}:{self.password}@{self.proxy_host}:{self.proxy_port}"
-            
-        if self.api_key:
-            logger.info("Bright Data client initialized with API Key for direct requests.")
-        elif self.proxy_url:
-            logger.info("Bright Data client initialized with proxy URL.")
+        if self.customer_id and self.password and self.zone_name:
+            # Bright Data proxy auth format: brd-customer-<id>-zone-<zone>:<password>
+            proxy_user = f"brd-customer-{self.customer_id}-zone-{self.zone_name}"
+            self.proxy_url = f"http://{proxy_user}:{self.password}@{self.proxy_host}:{self.proxy_port}"
+
+        if self.proxy_url:
+            logger.info("Bright Data client initialized with proxy zone '%s'.", self.zone_name)
+        elif self.api_key:
+            logger.info("Bright Data client initialized with API Key for direct SERP requests.")
         else:
             logger.warning("Bright Data credentials missing in .env. Live web evidence will be unavailable.")
 
@@ -469,50 +212,79 @@ class BrightDataClient:
         language = str(market_profile.get("language_code") or "en").lower()
         return {"q": query, "gl": country, "hl": language}
 
+    def _parse_duckduckgo_html(self, html: str) -> List[Dict[str, Any]]:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        results = []
+        for result in soup.select("div.result"):
+            title_elem = result.select_one("a.result__a") or result.select_one("a.result__url")
+            snippet_elem = result.select_one("a.result__snippet") or result.select_one(".result__snippet")
+            if title_elem:
+                title = title_elem.get_text().strip()
+                url = title_elem.get("href") or ""
+                snippet = snippet_elem.get_text().strip() if snippet_elem else ""
+                results.append({
+                    "title": title,
+                    "link": url,
+                    "url": url,
+                    "description": snippet,
+                    "snippet": snippet,
+                })
+        return results
+
+    async def _unlocker_fetch(self, target_url: str) -> str | None:
+        """
+        Fetch a URL's raw HTML through the Bright Data Web Unlocker API request
+        endpoint (zone is IP-whitelisted to the VPS). Returns HTML or None.
+        """
+        if not (self.api_key and self.zone_name):
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    "https://api.brightdata.com/request",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"zone": self.zone_name, "url": target_url, "format": "raw"},
+                )
+            if response.status_code == 200:
+                self.last_serp_error = None
+                return response.text
+            self.last_serp_error = f"unlocker_status_{response.status_code}"
+            logger.error(f"Bright Data Web Unlocker returned {response.status_code}: {response.text[:200]}")
+        except Exception as e:
+            self.last_serp_error = "unlocker_error"
+            logger.error(f"Bright Data Web Unlocker request failed: {e}")
+        return None
+
     async def _query_serp(self, query: str, market_profile: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
         market_profile = market_profile or {}
-        params = self._search_params(query, market_profile)
-        search_url = "https://www.google.com/search?" + urlencode(params)
+        ddg_url = "https://html.duckduckgo.com/html/?" + urlencode({"q": query})
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
 
-        zone_name = await self._resolve_zone_name()
-        if self.api_key and zone_name:
-            try:
-                async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.post(
-                        "https://api.brightdata.com/request",
-                        headers={
-                            "Authorization": f"Bearer {self.api_key}",
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "zone": zone_name,
-                            "url": search_url,
-                            "format": "json",
-                        },
-                    )
-                if response.status_code == 200:
-                    return self._extract_serp_results(response.json())
-                self.last_serp_error = f"request_failed_{response.status_code}"
-                logger.error(f"Bright Data SERP returned status {response.status_code}: {response.text}")
-            except Exception as e:
-                self.last_serp_error = "request_error"
-                logger.error(f"Bright Data direct SERP request failed: {e}")
-        elif self.api_key and not zone_name:
-            logger.error("Bright Data API key is set, but no active SERP zone is configured or available.")
+        # Method 1: DuckDuckGo HTML via Bright Data Web Unlocker (live, reliable).
+        html = await self._unlocker_fetch(ddg_url)
+        if html:
+            results = self._parse_duckduckgo_html(html)
+            if results:
+                logger.info(f"Bright Data Web Unlocker retrieved {len(results)} live results for: {query}")
+                return results
 
-        if self.proxy_url:
-            try:
-                async with httpx.AsyncClient(proxy=self.proxy_url, timeout=12.0) as client:
-                    response = await client.get(
-                        "http://www.google.com/search",
-                        headers={"X-BrightData-Response": "json"},
-                        params=params,
-                    )
-                if response.status_code == 200:
-                    return self._extract_serp_results(response.json())
-                logger.error(f"Bright Data proxy SERP returned status {response.status_code}: {response.text}")
-            except Exception as e:
-                logger.error(f"Bright Data proxy SERP request failed: {e}")
+        # Method 2: Direct DuckDuckGo (no proxy) as last-resort live source.
+        try:
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                response = await client.post("https://html.duckduckgo.com/html/", data={"q": query}, headers=headers)
+            if response.status_code == 200:
+                results = self._parse_duckduckgo_html(response.text)
+                if results:
+                    logger.info(f"Direct DuckDuckGo retrieved {len(results)} live results for: {query}")
+                    return results
+        except Exception as e:
+            logger.error(f"Direct DuckDuckGo search failed: {e}")
 
         return []
 
@@ -643,65 +415,29 @@ class BrightDataClient:
 
         evidence_count = len(evidence)
         
-        # Determine status and confidence
+        # Status and confidence are derived ONLY from live scraped evidence.
+        # No fabricated population is ever injected — if nothing is parsed the
+        # figure is reported as Unavailable so the UI never shows fake data.
         if parsed_population and evidence_count >= 2:
             status = "live"
-            source = "Bright Data SERP Research"
+            source = "Bright Data Live Research"
             confidence = "high" if evidence_count >= 4 else "medium"
             print(f"[SUCCESS] Population research for {city}: {parsed_population:,} (confidence: {confidence}, evidence: {evidence_count} sources)")
-        elif evidence_count > 0:
-            status = "partial"
-            source = "Bright Data SERP (Limited Results)"
+        elif parsed_population:
+            status = "live"
+            source = "Bright Data Live Research"
             confidence = "low"
-            if not parsed_population:
-                # Try to estimate from city name as last resort
-                print(f"[WARNING] Could not parse population from {evidence_count} evidence items for {city}")
+            print(f"[PARTIAL] Population research for {city}: {parsed_population:,} (single live source)")
+        elif evidence_count > 0:
+            status = "unverified"
+            source = "Bright Data Live Research (population not parsed)"
+            confidence = "unverified"
+            print(f"[WARNING] Could not parse a population figure from {evidence_count} live items for {city}")
         else:
-            # Only use fallback if absolutely no data from Bright Data
-            status = "fallback_presets"
-            source = "Local Presets Fallback"
-            confidence = "estimated"
-            print(f"[FALLBACK] No Bright Data results for {city}, using fallback data")
-            
-            city_lower = city.lower().strip()
-            if "naga" in city_lower:
-                parsed_population = 209170
-                parsed_student_pop = "75,000+ (major regional educational hub)"
-                parsed_school_market_desc = "Concentrated student demand from Ateneo de Naga University (ADNU), University of Nueva Caceres (UNC), and Universidad de Santa Isabel (USI)."
-            elif "legazpi" in city_lower:
-                parsed_population = 204384
-                parsed_student_pop = "68,000+ (provincial educational center)"
-                parsed_school_market_desc = "Strong student demographics driven by Bicol University (BU) main campus and Divine Word College of Legazpi (DWCL)."
-            elif "daet" in city_lower:
-                parsed_population = 111700
-                parsed_student_pop = "35,000+ (local educational center)"
-                parsed_school_market_desc = "Growing student market centered around Camarines Norte State College (CNSC) and Mabini Colleges."
-            else:
-                parsed_population = 150000
-                parsed_student_pop = "25,000+ (estimated)"
-                parsed_school_market_desc = "Average student demographic presence across municipal high schools and local community colleges."
-            
-            evidence = [
-                {
-                    "title": f"Official Demographics & Population Registry of {city}",
-                    "snippet": f"Official census data estimate showing active population of approximately {parsed_population:,} in the {city} area.",
-                    "url": f"https://www.google.com/search?q={city.replace(' ', '+')}+population+demographics",
-                },
-                {
-                    "title": f"Educational & Student Market Profile for {city}",
-                    "snippet": f"Estimated student population of {parsed_student_pop}. {parsed_school_market_desc}",
-                    "url": f"https://www.google.com/search?q={city.replace(' ', '+')}+colleges+universities+schools",
-                }
-            ]
-            evidence_count = len(evidence)
-
-        # Add default student population if not found
-        if not parsed_student_pop and parsed_population:
-            estimated_students = int(parsed_population * 0.18)  # Estimate 18% student demographic
-            parsed_student_pop = f"Approximately {estimated_students:,} (estimated 15-22% of total population)"
-        
-        if not parsed_school_market_desc:
-            parsed_school_market_desc = f"General youth/student presence in local secondary and tertiary institutions in {city}."
+            status = "unverified"
+            source = "Live research unavailable"
+            confidence = "unverified"
+            print(f"[UNVERIFIED] No live research results for {city}; population reported as Unavailable")
 
         self.last_demographics_diagnostics = {
             "provider": "Bright Data",
@@ -717,8 +453,8 @@ class BrightDataClient:
             "city": city,
             "population": parsed_population,
             "population_label": f"{parsed_population:,}" if parsed_population else "Unavailable",
-            "student_population": parsed_student_pop,
-            "school_market_desc": parsed_school_market_desc,
+            "student_population": parsed_student_pop or "Unavailable",
+            "school_market_desc": parsed_school_market_desc or "",
             "source": source,
             "confidence": confidence,
             "evidence": evidence[:6],
@@ -799,75 +535,21 @@ class BrightDataClient:
                 total_evidence += len(evidence)
                 weighted_score += min(len(evidence), 3) * float(categories[category]["weight"])
 
+            # No fabricated anchors: zones with no live evidence stay at zero.
             zone_evidence = sum(counts.values())
-            if not zone_evidence:
-                zn = zone.get("name") or "Commercial Zone"
-                city_lower = city.lower().strip()
-                zn_lower = zn.lower().strip()
-                
-                # Check preset matches
-                matched_preset = None
-                for key_city, zones_dict in ANCHOR_PRESETS.items():
-                    if key_city in city_lower or city_lower in key_city:
-                        for key_zone, preset_data in zones_dict.items():
-                            if key_zone in zn_lower or zn_lower in key_zone:
-                                matched_preset = preset_data
-                                break
-                        if matched_preset:
-                            break
-                
-                if matched_preset:
-                    # Load presets
-                    for category in categories.keys():
-                        preset_list = matched_preset.get(category, [])
-                        anchors[category] = preset_list
-                        counts[category] = len(preset_list)
-                else:
-                    # Dynamic generic generation
-                    anchors["malls"] = [{"title": f"{zn} Plaza Mall", "snippet": f"Modern commercial shopping mall and retail hub located in the heart of {zn}, {city}.", "url": "", "search_query": ""}]
-                    anchors["public_markets"] = [{"title": f"{zn} Central Market", "snippet": f"Busy public market and grocery center serving the {zn} district, {city}.", "url": "", "search_query": ""}]
-                    anchors["colleges_universities"] = [{"title": f"University of {city} ({zn} Campus)", "snippet": f"Higher education university campus drawing thousands of college students to {zn}.", "url": "", "search_query": ""}]
-                    anchors["schools"] = [
-                        {"title": f"{zn} Science Academy", "snippet": f"Top-performing regional secondary school situated in {zn}, {city}.", "url": "", "search_query": ""},
-                        {"title": f"{city} High School", "snippet": f"Established public secondary school serving the student market in {zn}.", "url": "", "search_query": ""}
-                    ]
-                    anchors["transit_hubs"] = [
-                        {"title": f"{zn} Metro & Bus Terminal", "snippet": f"Central public transit station connecting the {zn} commercial sector with the rest of {city}.", "url": "", "search_query": ""}
-                    ]
-                    
-                    counts["malls"] = 1
-                    counts["public_markets"] = 1
-                    counts["colleges_universities"] = 1
-                    counts["schools"] = 2
-                    counts["transit_hubs"] = 1
-                
-                zone_evidence = sum(counts.values())
-                total_evidence += zone_evidence
-                
-                weighted_score = 0.0
-                for category in categories.keys():
-                    weighted_score += min(counts.get(category, 0), 3) * float(categories[category]["weight"])
-
             anchor_score = round(min(10.0, weighted_score), 1) if zone_evidence else 0.0
-            if any(x.get("url") == "" for x in anchors.get("malls", [])):
-                source = "Local Presets Fallback"
-                confidence = "medium"
-                anchor_summary = (
-                    f"Fell back to local presets: compiled {zone_evidence} nearby demand-anchor evidence result(s) "
-                    f"around {zone.get('name')}."
-                )
-            elif zone_evidence:
-                source = "Bright Data SERP evidence"
+            if zone_evidence:
+                source = "Bright Data Live Research"
                 confidence = "medium" if zone_evidence >= 6 else "low"
                 anchor_summary = (
                     f"Bright Data returned {zone_evidence} nearby demand-anchor evidence result(s) "
                     f"around {zone.get('name')}."
                 )
             else:
-                source = "Live Bright Data unavailable"
+                source = "Live research unavailable"
                 confidence = "unverified"
                 anchor_summary = (
-                    "No live Bright Data demand-anchor evidence was returned for this zone. "
+                    "No live demand-anchor evidence was returned for this zone. "
                     "Validate nearby malls, markets, schools, colleges, and transit manually before committing."
                 )
 
@@ -966,47 +648,25 @@ class BrightDataClient:
                     "url": url,
                 })
 
-            city_lower = city.lower().strip()
-            preset_zones = []
-            for key, val in LAND_MARKET_PRESETS.items():
-                if key in city_lower or city_lower in key:
-                    preset_zones = list(val.keys())
-                    break
-            
-            if not preset_zones:
-                preset_zones = ["Downtown Commercial Core", "Central Transit Corridor", "Lifestyle Waterfront District"]
-
+            # No fabricated zones: candidates without live evidence are marked
+            # unverified with a zero traffic score, never invented names/scores.
             if evidence:
                 evidence_count += len(evidence)
                 name = self._zone_name_from_result(results[0], city, index)
                 score = self._traffic_score_from_evidence(results)
-                source = "Bright Data SERP evidence"
+                source = "Bright Data Live Research"
                 confidence = "medium" if len(evidence) >= 3 else "low"
                 description = (
                     evidence[0]["snippet"]
                     or f"Bright Data returned live commercial search evidence for {name}."
                 )
-            elif index < len(preset_zones):
-                name = preset_zones[index]
-                score = round(8.4 - index * 0.9, 1)
-                source = "Local Presets Fallback"
-                confidence = "medium"
-                description = f"Local preset commercial zone identified for {name} in {city}."
-                evidence = [
-                    {
-                        "title": f"Pedestrian Traffic & Commercial Activity in {name}, {city}",
-                        "snippet": f"High foot-traffic activity and retail density mapped within {name} zone.",
-                        "url": f"https://www.google.com/search?q={name.replace(' ', '+')}+{city.replace(' ', '+')}+traffic",
-                    }
-                ]
-                evidence_count += len(evidence)
             else:
-                name = ["Live Data Pending - Commercial Core", "Live Data Pending - Transit Corridor", "Live Data Pending - Lifestyle District"][index]
+                name = f"{city} Candidate Zone {index + 1} (Unverified)"
                 score = 0.0
-                source = "Live Bright Data unavailable"
+                source = "Live research unavailable"
                 confidence = "unverified"
                 description = (
-                    "No live Bright Data search evidence was available for this candidate. "
+                    "No live search evidence was available for this candidate zone. "
                     "Do not treat this as a validated high-traffic site until live data is captured."
                 )
 
@@ -1064,45 +724,21 @@ class BrightDataClient:
                     "name": title[:90],
                     "snippet": snippet[:220],
                     "url": url,
-                    "source": "Bright Data SERP",
+                    "source": "Bright Data Live Research",
                 })
 
+            # No fabricated competitors: zero live results stays at zero.
             comp_count = len(competitors)
-            if not comp_count:
-                bt = business_type.lower()
-                zn = zone.get("name", "Commercial Area")
-                if "coffee" in bt or "cafe" in bt:
-                    mock_names = [f"Starbucks {zn}", f"Bo's Coffee {zn}", f"Coffee Project {zn}", f"The Daily Brew {zn}"]
-                elif "restaurant" in bt or "food" in bt or "dining" in bt:
-                    mock_names = [f"Jollibee {zn}", f"McDonald's {zn}", f"KFC {zn}", f"Local Diner {zn}"]
-                elif "retail" in bt or "shop" in bt or "store" in bt:
-                    mock_names = [f"SM Savemore {zn}", f"7-Eleven {zn}", f"Local Boutique {zn}", f"AlfaMart {zn}"]
-                else:
-                    mock_names = [f"Local {business_type} 1", f"Local {business_type} 2", f"{zn} {business_type}"]
-                
-                count = (len(zn) % 3) + 2
-                for i in range(min(count, len(mock_names))):
-                    competitors.append({
-                        "name": mock_names[i],
-                        "snippet": f"Local established {business_type.lower()} operating in {zn}.",
-                        "url": f"https://www.google.com/search?q={mock_names[i].replace(' ', '+')}",
-                        "source": "Local Presets Fallback"
-                    })
-                comp_count = len(competitors)
-                evidence_count += comp_count
+            evidence_count += comp_count
 
             traffic_score = float(zone.get("traffic_score") or 0.0)
-            if competitors and competitors[0].get("source") == "Local Presets Fallback":
+            if comp_count:
                 saturation = round(min(9.5, 1.8 + comp_count * 0.65), 1)
-                source = "Local Presets Fallback"
-                confidence = "medium"
-            elif comp_count:
-                saturation = round(min(9.5, 1.8 + comp_count * 0.65), 1)
-                source = "Bright Data SERP evidence"
+                source = "Bright Data Live Research"
                 confidence = "medium" if comp_count >= 4 else "low"
             else:
                 saturation = 0.0
-                source = "Live Bright Data unavailable"
+                source = "Live research unavailable"
                 confidence = "unverified"
 
             opp_score = round((traffic_score * 0.62) + ((10.0 - saturation) * 0.38), 2) if traffic_score else 0.0
@@ -1171,13 +807,6 @@ class BrightDataClient:
         return 120
 
     def _default_land_estimate(self, city: str, zone: Dict[str, Any], market_profile: Dict[str, Any]) -> Dict[str, int]:
-        city_presets = lookup_city(LAND_MARKET_PRESETS, city, {}) or {}
-        zone_preset = city_presets.get(zone.get("name", ""))
-        if zone_preset:
-            return {
-                "land_price_per_sqm": zone_preset["land_php_per_sqm"],
-                "rent_per_sqm_month": zone_preset["rent_php_per_sqm_month"],
-            }
 
         traffic = float(zone.get("traffic_score", 7.0))
         country_code = market_profile.get("country_code", "US")
@@ -1203,81 +832,9 @@ class BrightDataClient:
         return "LEASE FIRST"
 
     async def _query_land_serp(self, query: str, market_profile: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
-        market_profile = market_profile or {}
-        params = self._search_params(query, market_profile)
-        search_url = "https://www.google.com/search?" + urlencode(params)
-
-        zone_name = await self._resolve_zone_name()
-        if self.api_key and zone_name:
-            try:
-                async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.post(
-                        "https://api.brightdata.com/request",
-                        headers={
-                            "Authorization": f"Bearer {self.api_key}",
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "zone": zone_name,
-                            "url": search_url,
-                            "format": "json",
-                        },
-                    )
-                if response.status_code == 200:
-                    return self._extract_serp_results(response.json())
-
-                self.last_land_diagnostics = {
-                    "provider": "Bright Data",
-                    "status": "request_failed",
-                    "source": "direct_api",
-                    "zone": zone_name,
-                    "http_status": response.status_code,
-                    "zones_count": 0,
-                    "live_listing_count": 0,
-                }
-                logger.error(f"Bright Data land SERP returned status {response.status_code}: {response.text}")
-            except Exception as e:
-                self.last_land_diagnostics = {
-                    "provider": "Bright Data",
-                    "status": "request_error",
-                    "source": "direct_api",
-                    "zone": zone_name,
-                    "zones_count": 0,
-                    "live_listing_count": 0,
-                }
-                logger.error(f"Bright Data land SERP request failed: {e}")
-        elif self.api_key and not zone_name:
-            self.last_land_diagnostics = {
-                "provider": "Bright Data",
-                "status": self.last_serp_error or "missing_zone",
-                "source": "direct_api",
-                "zone": "",
-                "zones_count": 0,
-                "live_listing_count": 0,
-            }
-            logger.error("Bright Data API key is set, but no active SERP zone is configured for land search.")
-
-        if self.proxy_url:
-            try:
-                async with httpx.AsyncClient(proxy=self.proxy_url, timeout=12.0) as client:
-                    response = await client.get(
-                        "http://www.google.com/search",
-                        headers={"X-BrightData-Response": "json"},
-                        params=params,
-                    )
-                if response.status_code == 200:
-                    return self._extract_serp_results(response.json())
-            except Exception as e:
-                self.last_land_diagnostics = {
-                    "provider": "Bright Data",
-                    "status": "proxy_error",
-                    "source": "proxy",
-                    "zones_count": 0,
-                    "live_listing_count": 0,
-                }
-                logger.error(f"Bright Data land proxy request failed: {e}")
-
-        return []
+        # Land listings use the same live SERP pipeline (Bright Data SERP zone if
+        # available, otherwise DuckDuckGo via the Bright Data proxy).
+        return await self._query_serp(query, market_profile)
 
     async def research_land_listings(
         self,
@@ -1312,26 +869,18 @@ class BrightDataClient:
                     "snippet": snippet[:240],
                     "url": url,
                     "parsed_price_php": parsed_price,
-                    "source": "Bright Data SERP",
+                    "source": "Bright Data Live Research",
                 })
 
             estimate = self._default_land_estimate(city, zone, market_profile)
             parsed_prices = [item["parsed_price_php"] for item in listings if item.get("parsed_price_php")]
+            has_live_price = bool(parsed_prices)
             land_purchase_estimate = int(sum(parsed_prices) / len(parsed_prices)) if parsed_prices else (
                 estimate["land_price_per_sqm"] * required_lot_sqm
             )
 
-            if not listings:
-                listings = [
-                    {
-                        "title": f"Commercial Lot for Lease/Sale in {zone.get('name')}",
-                        "snippet": f"Prime commercial lot of {required_lot_sqm} sqm located in {zone.get('name')}, {city}. Suitable for new {business_type.lower()} setup.",
-                        "url": f"https://www.google.com/search?q={zone.get('name').replace(' ', '+')}+{city.replace(' ', '+')}+commercial+lot",
-                        "parsed_price_php": land_purchase_estimate,
-                        "source": "Local Presets Fallback",
-                    }
-                ]
-
+            # No fabricated listings: count only real scraped listings. When none
+            # are found, the economics below are explicitly an unverified estimate.
             live_listing_count += len(listings)
 
             monthly_rent = estimate["rent_per_sqm_month"] * required_lot_sqm
@@ -1364,7 +913,8 @@ class BrightDataClient:
                 ),
                 "search_query": query,
                 "listings": listings,
-                "source": "Bright Data SERP" if listings else "Unverified planning estimate - live listing unavailable",
+                "price_basis": "live_listing" if has_live_price else "unverified_estimate",
+                "source": "Bright Data Live Research" if has_live_price else "Unverified planning estimate - live listing unavailable",
             })
 
         status = "live" if live_listing_count else self._empty_serp_status(
@@ -1382,166 +932,58 @@ class BrightDataClient:
 
     async def research_local_events(self, city: str, market_profile: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
         """
-        Research local events and festivals in the target city using Bright Data SERP API/proxy,
-        returning an empty, unverified result if live Bright Data evidence is unavailable.
+        Research local events and festivals using the live Bright Data SERP
+        pipeline. Returns ONLY live scraped events; if nothing is found it
+        returns an empty list (no fabricated/preset events).
         """
         logger.info(f"Researching events for: {city}")
         market_profile = market_profile or {}
         country_name = market_profile.get("country_name") or ""
-        
-        # Build search query
+
         query = f"major events festivals calendar in {city} {country_name}".strip()
-        search_url = "https://www.google.com/search?" + urlencode(self._search_params(query, market_profile))
-        
-        # Method 1: Try Direct API using API Key Bearer Token
-        zone_name = await self._resolve_zone_name()
-        if self.api_key and zone_name:
-            try:
-                logger.info(f"Connecting to Bright Data API to query Google SERP for events in {city}...")
-                url = "https://api.brightdata.com/request"
-                headers = {
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "zone": zone_name,
-                    "url": search_url,
-                    "format": "json"
-                }
-                
-                async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.post(url, headers=headers, json=payload)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        parsed_events = self._parse_serp_json(data)
-                        if parsed_events:
-                            self.last_diagnostics = {
-                                "provider": "Bright Data",
-                                "status": "live",
-                                "source": "direct_api",
-                                "zone": zone_name,
-                                "events_count": len(parsed_events),
-                            }
-                            logger.info(f"Successfully scraped {len(parsed_events)} events using Bright Data SERP API.")
-                            return parsed_events
-                    elif response.status_code == 401:
-                        self.last_diagnostics = {
-                            "provider": "Bright Data",
-                            "status": "auth_failed",
-                            "source": "direct_api",
-                            "zone": zone_name,
-                            "http_status": response.status_code,
-                            "events_count": 0,
-                        }
-                        logger.error(f"Bright Data authentication failed (401: {response.text}). Check if API Key has expired.")
-                    else:
-                        self.last_diagnostics = {
-                            "provider": "Bright Data",
-                            "status": "request_failed",
-                            "source": "direct_api",
-                            "zone": zone_name,
-                            "http_status": response.status_code,
-                            "events_count": 0,
-                        }
-                        logger.error(f"Bright Data SERP API returned status {response.status_code}: {response.text}")
-            except Exception as e:
-                self.last_diagnostics = {
-                    "provider": "Bright Data",
-                    "status": "request_error",
-                    "source": "direct_api",
-                    "zone": zone_name,
-                    "events_count": 0,
-                }
-                logger.error(f"Bright Data direct API request failed: {e}. Trying proxy if configured...")
-        elif self.api_key and not zone_name:
+        results = await self._query_serp(query, market_profile)
+
+        parsed_events = []
+        seen = set()
+        for res in results[:6]:
+            title = res.get("title") or res.get("name")
+            if not title:
+                continue
+            snippet = res.get("description") or res.get("snippet") or res.get("text") or ""
+            normalized = re.sub(r"[^a-z0-9]+", "", title.lower())
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+
+            period = "Annual / Seasonal"
+            for month in ["January", "February", "March", "April", "May", "June", "July",
+                          "August", "September", "October", "November", "December"]:
+                if month.lower() in snippet.lower() or month.lower() in title.lower():
+                    period = month
+                    break
+
+            parsed_events.append({
+                "name": str(title)[:120],
+                "period": period,
+                "impact": str(snippet)[:240] or "Live event evidence from Bright Data research.",
+                "type": "Live Event Research",
+            })
+
+        if parsed_events:
             self.last_diagnostics = {
                 "provider": "Bright Data",
-                "status": self.last_serp_error or "missing_zone",
-                "source": "direct_api",
-                "zone": "",
+                "status": "live",
+                "source": "Bright Data Live Research",
+                "events_count": len(parsed_events),
+            }
+            logger.info(f"Scraped {len(parsed_events)} live events for {city}.")
+        else:
+            self.last_diagnostics = {
+                "provider": "Bright Data",
+                "status": "unverified",
+                "source": "Live research unavailable",
                 "events_count": 0,
             }
-            logger.error("Bright Data API key is set, but no active SERP zone is configured for events.")
+            logger.info(f"No live events found for {city}; returning empty (no fabricated events).")
 
-        # Method 2: Try Old Proxy Gateway
-        if self.proxy_url:
-            try:
-                logger.info(f"Connecting to Bright Data proxy gateway to query Google SERP for events in {city}...")
-                async with httpx.AsyncClient(proxy=self.proxy_url, timeout=12.0) as client:
-                    headers = {
-                        "X-BrightData-Response": "json"
-                    }
-                    response = await client.get(
-                        "http://www.google.com/search",
-                        headers=headers,
-                        params=self._search_params(query, market_profile)
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        parsed_events = self._parse_serp_json(data)
-                        if parsed_events:
-                            self.last_diagnostics = {
-                                "provider": "Bright Data",
-                                "status": "live",
-                                "source": "proxy",
-                                "events_count": len(parsed_events),
-                            }
-                            logger.info(f"Successfully scraped {len(parsed_events)} events using Bright Data proxy.")
-                            return parsed_events
-            except Exception as e:
-                self.last_diagnostics = {
-                    "provider": "Bright Data",
-                    "status": "proxy_error",
-                    "source": "proxy",
-                    "events_count": 0,
-                }
-                logger.error(f"Bright Data proxy request failed: {e}. Falling back to preset database...")
-                
-        city_lower = city.lower().strip()
-        preset_events = None
-        for key, events in LOCAL_EVENTS_PRESETS.items():
-            if key in city_lower or city_lower in key:
-                preset_events = events
-                break
-                
-        if preset_events:
-            self.last_diagnostics = {
-                "provider": "Bright Data",
-                "status": "fallback_presets",
-                "source": "presets",
-                "events_count": len(preset_events),
-            }
-            logger.info(f"Fallen back to local presets for {city}. Loaded {len(preset_events)} events.")
-            return preset_events
-
-        # Return high-quality generic local events for non-preset cities
-        generic_events = [
-            {
-                "name": f"{city} Annual Shopping & Food Festival",
-                "period": "October (Peak)",
-                "impact": "City-wide retail and dining campaign driving strong seasonal customer traffic.",
-                "type": "Commerce & Food"
-            },
-            {
-                "name": f"{city} Spring Arts & Culture Festival",
-                "period": "April",
-                "impact": "Weekend community celebration boosting local pedestrian traffic and cafe visits.",
-                "type": "Cultural & Arts"
-            },
-            {
-                "name": f"{city} Year-End Holiday Expo",
-                "period": "December",
-                "impact": "Holiday trade and shopping events bringing regional shoppers to the commercial core.",
-                "type": "Trade & Holiday"
-            }
-        ]
-        self.last_diagnostics = {
-            "provider": "Bright Data",
-            "status": "fallback_presets",
-            "source": "Local Presets Fallback",
-            "events_count": len(generic_events),
-        }
-        logger.info(f"Fallen back to generic local presets for {city}. Loaded {len(generic_events)} events.")
-        return generic_events
+        return parsed_events

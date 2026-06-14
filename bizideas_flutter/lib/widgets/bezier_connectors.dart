@@ -175,7 +175,7 @@ class _SplitBezierPainter extends CustomPainter {
       basePaint.color = const Color(0xFF10B981);
       basePaint.strokeWidth = 2.0;
     } else if (activeLeft) {
-      basePaint.color = colorLeft;
+      basePaint.color = const Color(0xFFFF187F);
       basePaint.strokeWidth = 2.0;
     } else {
       basePaint.color = const Color(0xFFE2E8F0);
@@ -196,7 +196,7 @@ class _SplitBezierPainter extends CustomPainter {
       basePaint.color = const Color(0xFF10B981);
       basePaint.strokeWidth = 2.0;
     } else if (activeRight) {
-      basePaint.color = colorRight;
+      basePaint.color = const Color(0xFFFF187F);
       basePaint.strokeWidth = 2.0;
     } else {
       basePaint.color = const Color(0xFFE2E8F0);
@@ -206,10 +206,10 @@ class _SplitBezierPainter extends CustomPainter {
 
     // Pulsing photons on active paths
     if (activeLeft) {
-      _drawPhoton(canvas, pathLeft, progress, colorLeft);
+      _drawPhoton(canvas, pathLeft, progress, const Color(0xFFFF187F));
     }
     if (activeRight) {
-      _drawPhoton(canvas, pathRight, progress, colorRight);
+      _drawPhoton(canvas, pathRight, progress, const Color(0xFFFF187F));
     }
   }
 
@@ -424,7 +424,7 @@ class _MergeBezierPainter extends CustomPainter {
       basePaint.color = colorParent;
       basePaint.strokeWidth = 2.0;
     } else if (activeLeft) {
-      basePaint.color = colorLeft;
+      basePaint.color = const Color(0xFFFF187F);
       basePaint.strokeWidth = 2.0;
     } else {
       basePaint.color = const Color(0xFFE2E8F0);
@@ -448,7 +448,7 @@ class _MergeBezierPainter extends CustomPainter {
       basePaint.color = colorParent;
       basePaint.strokeWidth = 2.0;
     } else if (activeRight) {
-      basePaint.color = colorRight;
+      basePaint.color = const Color(0xFFFF187F);
       basePaint.strokeWidth = 2.0;
     } else {
       basePaint.color = const Color(0xFFE2E8F0);

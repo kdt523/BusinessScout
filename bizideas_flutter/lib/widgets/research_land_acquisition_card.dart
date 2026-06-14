@@ -155,10 +155,14 @@ class ResearchLandAcquisitionCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   
                   // Location details & Coordinates
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 10,
+                    runSpacing: 6,
                     children: [
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.location_on_outlined, color: Colors.grey[500], size: 13),
                           const SizedBox(width: 4),
@@ -218,24 +222,32 @@ class ResearchLandAcquisitionCard extends StatelessWidget {
             children: [
               Icon(icon, size: 11, color: color),
               const SizedBox(width: 4),
-              Text(
-                label.toUpperCase(),
-                style: GoogleFonts.outfit(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.grey[450],
-                  letterSpacing: 0.3,
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey[450],
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            price,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              price,
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: color,
+              ),
             ),
           ),
         ],

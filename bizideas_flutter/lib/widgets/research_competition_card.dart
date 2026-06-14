@@ -139,6 +139,9 @@ class ResearchCompetitionCard extends StatelessWidget {
                 final String initial = nameStr.isNotEmpty ? nameStr[0].toUpperCase() : 'C';
 
                 return Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width - 80,
+                  ),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFAFAFA),
@@ -167,12 +170,15 @@ class ResearchCompetitionCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        nameStr,
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[850],
+                      Flexible(
+                        child: Text(
+                          nameStr,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[850],
+                          ),
                         ),
                       ),
                     ],

@@ -7,14 +7,13 @@ import 'package:path_provider/path_provider.dart';
 import '../models/room_message.dart';
 
 class ApiService {
-  // Connected to remote VPS server
-  static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8082';
-    }
-    final isAndroid = defaultTargetPlatform == TargetPlatform.android;
-    return isAndroid ? 'http://10.0.2.2:8082' : 'http://localhost:8082';
-  }
+  // TODO: Set this to your own backend server URL before deploying.
+  // Example: 'http://your-server-ip-or-domain'
+  // For local development: 'http://localhost:8000'
+  static String get baseUrl => const String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'http://localhost:8000',
+      );
 
   String? _mapboxAccessToken;
 

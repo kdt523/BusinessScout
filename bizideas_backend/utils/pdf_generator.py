@@ -825,6 +825,12 @@ def generate_business_plan_pdf(
         _append_clean_blocks(story, full_plan, body_style, h2_style)
         story.append(Spacer(1, 12))
 
+    registration_guide = str(plan_details.get("registration_guide") or "").strip()
+    if registration_guide:
+        story.append(Paragraph("Business Registration & Compliance Guide", h2_style))
+        _append_clean_blocks(story, registration_guide, body_style, h2_style)
+        story.append(Spacer(1, 12))
+
     sections_to_add = [
         ("Executive Summary", plan_details.get("executive_summary", "")),
         ("Target Customer Demographics", plan_details.get("demographics", "")),

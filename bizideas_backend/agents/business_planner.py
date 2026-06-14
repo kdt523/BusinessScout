@@ -287,94 +287,20 @@ class BusinessPlannerAgent(BaseAgent):
                 "results_count": 0,
             }
 
+        # No fabricated strategy presets: if live research returned nothing, the
+        # strategy evidence stays empty and is honestly marked unverified.
         if not strategy_evidence:
-            bt_lower = business_type.lower()
-            if "coffee" in bt_lower or "cafe" in bt_lower:
-                strategy_evidence = [
-                    {
-                        "title": "Modern Coffee Shop Business Model & Strategy",
-                        "snippet": "Focus on high-margin specialty beverages, workspace-friendly design with reliable internet, and a strong digital loyalty program to drive repeat visits.",
-                        "url": "https://example.com/coffee-strategy",
-                        "search_query": strategy_research_query,
-                    },
-                    {
-                        "title": "Acoustic Zoning & Space Optimization in Cafes",
-                        "snippet": "Separate social seating from silent working zones to cater to both groups, increasing average stay time and ticket size.",
-                        "url": "https://example.com/cafe-seating",
-                        "search_query": strategy_research_query,
-                    }
-                ]
-            elif "retail" in bt_lower or "boutique" in bt_lower or "shop" in bt_lower:
-                strategy_evidence = [
-                    {
-                        "title": "Omnichannel Retail Strategy for Small Businesses",
-                        "snippet": "Combine a beautiful physical showroom/boutique with active social commerce (Instagram/TikTok checkout) and local click-and-collect services.",
-                        "url": "https://example.com/retail-omnichannel",
-                        "search_query": strategy_research_query,
-                    },
-                    {
-                        "title": "Visual Merchandising & Store Layout Optimization",
-                        "snippet": "Use decompression zones at the entrance, speed bumps for high-margin items, and enticing lighting to boost average basket size.",
-                        "url": "https://example.com/retail-layout",
-                        "search_query": strategy_research_query,
-                    }
-                ]
-            elif "restaurant" in bt_lower or "food" in bt_lower or "diner" in bt_lower or "fast food" in bt_lower:
-                strategy_evidence = [
-                    {
-                        "title": "Restaurant Operations & Efficiency Best Practices",
-                        "snippet": "Optimize kitchen prep workflow, design a high-margin menu focused on signature items, and partner with local delivery platforms for secondary revenue.",
-                        "url": "https://example.com/restaurant-strategy",
-                        "search_query": strategy_research_query,
-                    },
-                    {
-                        "title": "Customer Loyalty & Dining Experience Strategies",
-                        "snippet": "Leverage tabletop QR ordering to minimize staff overhead, host weekly community themed dining events, and run targeted SMS promos.",
-                        "url": "https://example.com/dining-experience",
-                        "search_query": strategy_research_query,
-                    }
-                ]
-            elif "work" in bt_lower or "office" in bt_lower or "cowork" in bt_lower:
-                strategy_evidence = [
-                    {
-                        "title": "Coworking Space Business Model & Revenue Diversification",
-                        "snippet": "Generate stable recurring revenue via monthly hot desk memberships, while offering high-margin private office suites and meeting room bookings.",
-                        "url": "https://example.com/coworking-strategy",
-                        "search_query": strategy_research_query,
-                    },
-                    {
-                        "title": "Community-Driven Coworking Strategy",
-                        "snippet": "Host regular networking events, professional workshops, and community socials to reduce member churn and build local brand loyalty.",
-                        "url": "https://example.com/coworking-community",
-                        "search_query": strategy_research_query,
-                    }
-                ]
-            else:
-                strategy_evidence = [
-                    {
-                        "title": f"Successful Startup Strategies for {business_type} Businesses",
-                        "snippet": f"Identify a clear niche in the local market, utilize targeted digital marketing, and focus on high-quality customer experience to stand out from competitors.",
-                        "url": "https://example.com/generic-business-strategy",
-                        "search_query": strategy_research_query,
-                    },
-                    {
-                        "title": f"Operational Scaling and Customer Retention for {business_type}",
-                        "snippet": "Standardize day-to-day operations, implement CRM systems to track customer satisfaction, and leverage subscription models if applicable.",
-                        "url": "https://example.com/operational-scaling",
-                        "search_query": strategy_research_query,
-                    }
-                ]
             strategy_diagnostics = {
                 "provider": "Bright Data",
-                "status": "fallback_presets",
-                "source": "Local Strategy Presets",
-                "results_count": len(strategy_evidence)
+                "status": "unverified_no_live_results",
+                "source": "Live research unavailable",
+                "results_count": 0,
             }
 
         strategy_str = "\n".join([
             f"- {s['title']}: {s['snippet']} (source: {s['url']})"
             for s in strategy_evidence
-        ])
+        ]) or "- No live strategy evidence available (Bright Data returned no results)."
 
         land_research = await brightdata_client.research_land_listings(city, enriched_zones, business_type, market_profile)
         land_diagnostics = brightdata_client.last_land_diagnostics
@@ -382,6 +308,110 @@ class BusinessPlannerAgent(BaseAgent):
         context["land_diagnostics"] = land_diagnostics
         context["strategy_research"] = strategy_evidence
         context["strategy_diagnostics"] = strategy_diagnostics
+
+        # Research business registration and compliance requirements using Bright Data SERP
+        await room.post_orchestration_event(
+            stage="REGISTRATION_RESEARCH",
+            content=f"Business Planner researching business registration and compliance requirements for {business_type} in {city} via Bright Data...",
+            from_agent=self.name,
+            to_agents=["Band Mesh"],
+            state="active"
+        )
+        await asyncio.sleep(0.4)
+
+        country = market_profile.get("country_name") or (city.split(",")[-1].strip() if "," in city else city)
+        registration_query = context.get("registration_query") or f"how to register a {business_type} business in {city} {country} requirements process taxes permits"
+        registration_evidence = []
+        
+        # Read from context if available, otherwise fetch dynamically
+        serp_results = context.get("registration_evidence")
+        if serp_results is None:
+            try:
+                serp_results = await brightdata_client._query_serp(registration_query, market_profile)
+            except Exception as e:
+                import logging
+                logging.getLogger("BusinessPlanner").error(f"Failed to query registration research: {e}")
+                serp_results = []
+
+        if serp_results:
+            for res in serp_results[:5]:
+                title = res.get("title") or res.get("name") or "Registration Guide"
+                snippet = res.get("description") or res.get("snippet") or res.get("text") or "Details on registering a business."
+                url = res.get("link") or res.get("url") or ""
+                registration_evidence.append({
+                    "title": title,
+                    "snippet": snippet,
+                    "url": url,
+                    "search_query": registration_query,
+                })
+            registration_diagnostics = {
+                "provider": "Bright Data",
+                "status": "live",
+                "source": "serp_registration_research",
+                "results_count": len(registration_evidence)
+            }
+        else:
+            registration_diagnostics = {
+                "provider": "Bright Data",
+                "status": "unverified_no_live_results",
+                "source": "none",
+                "results_count": 0,
+            }
+
+        # Synthesize a custom registration guide via LLM
+        registration_sources_str = "\n".join([
+            f"- {r['title']}: {r['snippet']} (Source: {r['url']})"
+            for r in registration_evidence
+        ])
+
+        system_instruction_reg = (
+            f"You are the Business Planner Agent. Write a highly detailed, comprehensive, step-by-step "
+            f"business registration and tax compliance guide for starting a {business_type} in {city} ({country}). "
+            f"Structure the guide logically with clear steps from business naming, local government registration, "
+            f"obtaining necessary licenses and permits (e.g. food/health permits if it's a food business), tax registration, and ongoing compliance/taxation rules.\n"
+            f"Use the following Bright Data SERP search evidence to inform your guide:\n{registration_sources_str}\n\n"
+            f"Make sure to specify real local agencies (like DTI/SEC/BIR in the Philippines, DED in Dubai, IRS/Secretary of State in the US, Companies House in the UK, etc.) based on the target jurisdiction. "
+            f"Do not invent facts if the country is not recognized, but synthesize a highly accurate compliance plan for the target country. "
+            f"Structure the output in clean, readable Markdown format with headers, bold text, lists, and clear stages."
+        )
+
+        prompt_reg = (
+            f"Write a step-by-step business registration and compliance guide for starting a {business_type} in {city} ({country}). "
+            f"Provide a step-by-step checklist: \n"
+            f"1. Business Name Registration (appropriate local registries)\n"
+            f"2. Business Structure & Legal Entity setup\n"
+            f"3. Local Government Permits & Licensing (e.g. mayor's permit, sanitary permits, zoning compliance, etc.)\n"
+            f"4. Tax Registration & Compliance (local tax identification, sales tax/VAT, monthly/quarterly tax deadlines)\n"
+            f"5. Industry-Specific Requirements (e.g., food safety, employee health certificates, environmental clearance)\n\n"
+            f"If Bright Data evidence is limited, use your pre-trained knowledge of business law and registrations for {country} to make the guide extremely complete and useful."
+        )
+
+        registration_guide_md = await self.call_llm(prompt_reg, system_instruction_reg)
+
+        if not registration_guide_md:
+            registration_guide_md = f"""# Business Registration & Compliance Guide: {business_type} in {city}
+
+## Step 1: Legal Entity & Business Name
+- Determine if your business will operate as a Sole Proprietorship, Partnership, LLC, or Corporation.
+- Register your business name with the appropriate local registry (e.g. Secretary of State, Department of Trade, or Commercial Registry).
+
+## Step 2: Local Permits and Licenses
+- Obtain a general Business License from your local municipality or city hall.
+- Secure specific permits for your sector:
+  - Food & beverage (if applicable): Health, food handling, sanitation, and safety clearances.
+  - Retail/Commercial: Zoning permits and fire safety inspections.
+
+## Step 3: Tax Registration & Compliance
+- Apply for a national Tax Identification Number (TIN or EIN).
+- Register for Value Added Tax (VAT) or Sales Tax with the local tax authority.
+- Understand quarterly and annual tax reporting deadlines.
+
+## Step 4: Employment & Labor Regulations
+- Register as an employer for social security, health insurance, and accident cover.
+- Ensure compliance with local minimum wage laws and working hours regulations.
+"""
+        context["registration_guide"] = registration_guide_md
+        context["registration_diagnostics"] = registration_diagnostics
 
         system_instruction = (
             f"You are the Business Planner Agent. Write a comprehensive, investor-grade feasibility report for a {business_type} "
@@ -517,6 +547,7 @@ class BusinessPlannerAgent(BaseAgent):
                         "• Target Profit Margin: 25%"
                     )
                 }
+        plan_details["registration_guide"] = registration_guide_md
 
         # 3. Generate PDF report
         # Create reports directory in static
@@ -622,6 +653,7 @@ class BusinessPlannerAgent(BaseAgent):
             data={
                 "action": "business_planner_results",
                 "best_zone": best_zone,
+                "zones": enriched_zones,
                 "seasonal_forecast": seasonal_forecast,
                 "plan_details": plan_details,
                 "pdf_url": pdf_url,
@@ -637,6 +669,7 @@ class BusinessPlannerAgent(BaseAgent):
                 "land_diagnostics": land_diagnostics,
                 "strategy_research": strategy_evidence,
                 "strategy_diagnostics": strategy_diagnostics,
+                "registration_diagnostics": registration_diagnostics,
                 "market_profile": market_profile,
                 "diagnostics": self.last_call_diagnostics
             }

@@ -28,7 +28,8 @@ class AgentGraphNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = color;
+    final activeColor = const Color(0xFFFF187F);
+    final themeColor = active ? activeColor : color;
     final isDark = themeColor == const Color(0xFF111111);
     
     Color cardBg;

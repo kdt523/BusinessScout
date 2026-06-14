@@ -127,9 +127,25 @@ def _mentions_me(msg: PlatformMessage, display_name: str) -> bool:
     """
     from band_bridge import AGENT_HANDLES
 
-    content = msg.content or ""
-    handle = AGENT_HANDLES.get(display_name, display_name)
-    return (f"@{display_name}" in content) or (f"@{handle}" in content) or (handle in content)
+    content = (msg.content or "").lower()
+    handle = AGENT_HANDLES.get(display_name, display_name).lower().strip()
+    disp_low = display_name.lower().strip()
+
+    # 1. Match exact handle or display name mentions
+    if f"@{disp_low}" in content or f"@{handle}" in content or handle in content:
+        return True
+
+    # 2. Fallback to keyword matches per agent
+    if display_name == "Orchestrator":
+        return any(x in content for x in ("@orchestrator", "@coordinator", "@main", "@lead"))
+    elif display_name == "Location Scout":
+        return any(x in content for x in ("@locationscout", "@location", "@scout", "@geo", "@gis"))
+    elif display_name == "Competitor Analyst":
+        return any(x in content for x in ("@competitoranalyst", "@competitor", "@analyst", "@saturation"))
+    elif display_name == "Business Planner":
+        return any(x in content for x in ("@businessplanner", "@business", "@planner", "@strategy", "@plan", "@finance"))
+
+    return False
 
 
 # ---------------------------------------------------------------------------

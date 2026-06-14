@@ -97,10 +97,16 @@ class OrchestratorAgent(BaseAgent):
         events_client = BrightDataClient()
         traffic_client = BrightDataClient()
         demographics_client = BrightDataClient()
-        events, zones, demographics = await asyncio.gather(
+        registration_client = BrightDataClient()
+
+        country = market_profile.get("country_name") or (city.split(",")[-1].strip() if "," in city else city)
+        registration_query = f"how to register a {business_type} business in {city} {country} requirements process taxes permits"
+
+        events, zones, demographics, registration_results = await asyncio.gather(
             events_client.research_local_events(city, market_profile),
             traffic_client.research_commercial_zones(city, business_type, market_profile),
             demographics_client.research_demographics(city, market_profile),
+            registration_client._query_serp(registration_query, market_profile),
         )
         anchor_client = BrightDataClient()
         anchor_research = await anchor_client.research_anchor_places(city, zones, market_profile)
@@ -108,13 +114,18 @@ class OrchestratorAgent(BaseAgent):
         context["zones"] = zones
         context["demographics"] = demographics
         context["anchor_research"] = anchor_research
+        context["registration_evidence"] = registration_results
+        context["registration_query"] = registration_query
         context["brightdata_diagnostics"] = events_client.last_diagnostics
         context["traffic_diagnostics"] = traffic_client.last_traffic_diagnostics
         context["demographics_diagnostics"] = demographics_client.last_demographics_diagnostics
         context["anchor_diagnostics"] = anchor_client.last_anchor_diagnostics
+        
+        reg_status = "live" if registration_results else ("fallback" if registration_client.last_serp_error else "empty")
+        
         await room.post_orchestration_event(
             stage="shared_context_ready",
-            content="Orchestrator wrote shared market, traffic, population, and anchor context into the Band room.",
+            content="Orchestrator wrote shared market, traffic, population, anchor, and business registration context into the Band room.",
             from_agent="Orchestrator",
             to_agents=["Location Scout", "Competitor Analyst", "Business Planner"],
             state="complete",
@@ -125,6 +136,7 @@ class OrchestratorAgent(BaseAgent):
                 "traffic_status": traffic_client.last_traffic_diagnostics.get("status"),
                 "demographics_status": demographics_client.last_demographics_diagnostics.get("status"),
                 "anchor_status": anchor_client.last_anchor_diagnostics.get("status"),
+                "registration_status": reg_status,
             },
         )
 
@@ -156,6 +168,7 @@ class OrchestratorAgent(BaseAgent):
             f"country={country_name}, coordinates={market_profile.get('lat')}, {market_profile.get('lng')}.\n\n"
             f"Population research: {demographics.get('population_label', 'Unavailable')} "
             f"(source={demographics.get('source')}; confidence={demographics.get('confidence')}).\n\n"
+            f"Business registration search results: {len(registration_results)} records found.\n\n"
             f"Shared Bright Data event context:\n"
             + "\n".join([f"- {e['name']} ({e['period']}): {e['impact']}" for e in events])
             + "\n\nBright Data traffic research candidates:\n"

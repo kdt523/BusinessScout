@@ -393,44 +393,32 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
 
     if (msg.role == 'system' || msg.type == 'status') {
       final isOrchestration = msg.type == "orchestration";
+      if (isOrchestration) {
+        return const SizedBox.shrink();
+      }
       final messageWidget = Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         decoration: BoxDecoration(
-          color: isOrchestration
-              ? const Color(0xFF111111)
-              : const Color(0xFFF1F5F9),
+          color: const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isOrchestration
-                ? const Color(0xFFFF187F).withOpacity(0.55)
-                : const Color(0xFF111111).withOpacity(0.12),
+            color: const Color(0xFF111111).withOpacity(0.12),
             width: 0.8,
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              isOrchestration
-                  ? Icons.account_tree_outlined
-                  : Icons.info_outline,
-              color: isOrchestration
-                  ? const Color(0xFFFF187F)
-                  : Colors.black,
+            const Icon(
+              Icons.info_outline,
+              color: Colors.black,
               size: 13,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isOrchestration ? "BAND_MESH: ${msg.content}" : msg.content,
-                style: isOrchestration
-                    ? GoogleFonts.sourceCodePro(
-                        color: const Color(0xFF00D18F),
-                        fontSize: 8.5,
-                        height: 1.3,
-                        fontWeight: FontWeight.w700,
-                      )
-                    : TextStyle(
+                msg.content,
+                style: TextStyle(
                         color: Colors.grey[800],
                         fontSize: 10.5,
                         fontStyle: FontStyle.italic,

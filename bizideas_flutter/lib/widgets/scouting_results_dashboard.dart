@@ -74,12 +74,12 @@ class ScoutingResultsDashboard extends StatelessWidget {
     // Safely calculate center coordinates (fallback to zones or default Naga City coordinates)
     double centerLat = 13.6218;
     double centerLng = 123.1952;
-    if (mapCenter != null && mapCenter!['lat'] != null && mapCenter!['lng'] != null) {
-      centerLat = (mapCenter!['lat'] as num).toDouble();
-      centerLng = (mapCenter!['lng'] as num).toDouble();
-    } else if (zones.isNotEmpty && zones.first['lat'] != null && zones.first['lng'] != null) {
+    if (zones.isNotEmpty && zones.first['lat'] != null && zones.first['lng'] != null) {
       centerLat = (zones.first['lat'] as num).toDouble();
       centerLng = (zones.first['lng'] as num).toDouble();
+    } else if (mapCenter != null && mapCenter!['lat'] != null && mapCenter!['lng'] != null) {
+      centerLat = (mapCenter!['lat'] as num).toDouble();
+      centerLng = (mapCenter!['lng'] as num).toDouble();
     }
 
     return SingleChildScrollView(
@@ -327,16 +327,20 @@ class ScoutingResultsDashboard extends StatelessWidget {
               const Icon(Icons.calendar_today_outlined,
                   color: Colors.black, size: 14),
               const SizedBox(width: 6),
-              Text(
-                "LOCAL EVENTS & SEASONAL PEAKS",
-                style: GoogleFonts.outfit(
-                  color: Colors.black,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.3,
+              Expanded(
+                child: Text(
+                  "LOCAL EVENTS & SEASONAL PEAKS",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    color: Colors.black,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(

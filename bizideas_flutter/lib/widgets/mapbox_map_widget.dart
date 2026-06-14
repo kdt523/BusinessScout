@@ -67,7 +67,7 @@ class _MapboxMapWidgetState extends State<MapboxMapWidget> {
     if (widget.accessToken != oldWidget.accessToken ||
         widget.lat != oldWidget.lat ||
         widget.lng != oldWidget.lng ||
-        widget.zones != oldWidget.zones) {
+        !listEquals(widget.zones, oldWidget.zones)) {
       if (!kIsWeb && widget.accessToken.isNotEmpty) {
         final htmlContent = _buildMapHtml();
         _controller.loadHtmlString(htmlContent, baseUrl: 'https://api.mapbox.com');

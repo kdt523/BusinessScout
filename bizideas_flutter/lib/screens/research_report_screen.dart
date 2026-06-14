@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../models/room_message.dart';
 import '../widgets/research_metrics_dashboard.dart';
 import '../widgets/research_competition_card.dart';
 import '../widgets/research_recommendations_card.dart';
@@ -11,6 +13,8 @@ import '../widgets/research_land_acquisition_card.dart';
 import '../widgets/research_forecast_card.dart';
 import '../widgets/mapbox_map_widget.dart';
 import '../widgets/responsive_web_wrapper.dart';
+import '../widgets/collaboration_chatbox.dart';
+import '../widgets/markdown_text.dart';
 
 class ResearchReportScreen extends StatefulWidget {
   final String roomId;
@@ -42,6 +46,7 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
     super.initState();
     _data = widget.reportData ?? {};
     _fetchMapboxToken();
+    _connectToStream();
     if (_data.isEmpty || !_data.containsKey('plan_details')) {
       _fetchReportData();
     }
@@ -117,6 +122,63 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
         });
       }
     }
+  }
+
+  final List<RoomMessage> _messages = [];
+  final ScrollController _scrollController = ScrollController();
+  StreamSubscription<RoomMessage>? _streamSubscription;
+
+  void _connectToStream() {
+    _streamSubscription = _apiService.streamRoomMessages(widget.roomId).listen(
+      (message) {
+        if (mounted) {
+          setState(() {
+            _messages.add(message);
+            if (_data.isEmpty) {
+              _processMessageForReport(message);
+            }
+          });
+          _scrollToBottom();
+        }
+      },
+      onError: (err) {
+        print("[DEBUG] Stream error in report screen: $err");
+      },
+    );
+  }
+
+  void _processMessageForReport(RoomMessage msg) {
+    if (msg.sender == "Business Planner" && msg.type == "data") {
+      _data = msg.data;
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<bool> _handleSendMessage(String content) async {
+    return await _apiService.sendRoomMessage(
+      widget.roomId,
+      'User',
+      'user',
+      content,
+    );
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _downloadPdf() async {
@@ -279,7 +341,7 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
 
     return ResponsiveWebWrapper(
       child: DefaultTabController(
-        length: 4,
+        length: 6,
       child: Scaffold(
         backgroundColor: const Color(0xFFFDFDFD),
         appBar: AppBar(
@@ -353,9 +415,11 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
             ),
             tabs: const [
               Tab(text: "Overview", icon: Icon(Icons.analytics_outlined, size: 18)),
+              Tab(text: "Registration Guide", icon: Icon(Icons.assignment_outlined, size: 18)),
               Tab(text: "Strategic Plan", icon: Icon(Icons.article_outlined, size: 18)),
               Tab(text: "Geographic & Site", icon: Icon(Icons.location_on_outlined, size: 18)),
               Tab(text: "Market & Projections", icon: Icon(Icons.trending_up_outlined, size: 18)),
+              Tab(text: "Advisory Chat", icon: Icon(Icons.chat_bubble_outline_rounded, size: 18)),
             ],
           ),
         ),
@@ -373,6 +437,7 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
                     lng: lng,
                     accessToken: _mapboxToken,
                     locationName: zoneName,
+                    zones: hasFullData ? List<dynamic>.from(_data['zones'] ?? []) : null,
                   ),
                   const SizedBox(height: 16),
                   ResearchMetricsDashboard(
@@ -396,7 +461,18 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
                 ],
               ),
               
-              // Tab 2: Detailed Strategy Plan
+              // Tab 2: Registration Guide
+              ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  if (planDetails.isNotEmpty && planDetails.containsKey('registration_guide'))
+                    _buildRegistrationGuideCard(planDetails['registration_guide'], primaryGold, neonPink)
+                  else
+                    _buildEmptyDataCard("No business registration guide compiled yet. Wait for Business Planner agent to complete."),
+                ],
+              ),
+
+              // Tab 3: Detailed Strategy Plan
               ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
@@ -457,11 +533,103 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
                     ),
                 ],
               ),
+
+              // Tab 5: Advisory Chat
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: primaryGold.withOpacity(0.12), width: 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: CollaborationChatbox(
+                      roomId: widget.roomId,
+                      messages: _messages,
+                      scrollController: _scrollController,
+                      onSendMessage: _handleSendMessage,
+                      onOpenPdf: _downloadPdf,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
     ),);
+  }
+
+  Widget _buildRegistrationGuideCard(String registrationGuide, Color primaryGold, Color neonPink) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: primaryGold.withOpacity(0.12), width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: neonPink.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.assignment_turned_in_outlined, color: neonPink, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'COMPLIANCE & REGISTRATION',
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.grey[500],
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Step-by-Step Business Guide',
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          MarkdownText(text: registrationGuide),
+        ],
+      ),
+    );
   }
 
   Widget _buildExecutiveSummaryCard(double oppScore, Color primaryGold, Color neonPink) {
@@ -604,13 +772,17 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
             children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title.toUpperCase(),
-                style: GoogleFonts.outfit(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                  color: Colors.grey[850],
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                    color: Colors.grey[850],
+                  ),
                 ),
               ),
             ],
@@ -628,20 +800,30 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: valueColor,
+              ),
             ),
           ),
         ],
