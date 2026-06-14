@@ -206,7 +206,6 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-              border: Border.all(
                 color: const Color(0xFF111111).withOpacity(0.15),
                 width: 1.0,
               ),
