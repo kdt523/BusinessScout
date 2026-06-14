@@ -12,8 +12,8 @@ class BizIdeasApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Premium Light Gold & Neon Pink Palette
-    final primaryGold = const Color(0xFFECC870); // Yellow Light Gold
+    // Premium Minimalist Black, Neon Pink, and White Palette
+    final primaryGold = const Color(0xFF111111); // Black (replaces gold)
     final neonPink = const Color(0xFFFF187F); // Neon Pink
     final bgWhite = const Color(0xFFFDFDFD); // Premium Off-White
     final cardWhite = const Color(0xFFFFFFFF); // Pure White
@@ -37,7 +37,7 @@ class BizIdeasApp extends StatelessWidget {
       ],
       theme: ThemeData(
         brightness: Brightness.light,
-        primaryColor: primaryGold,
+        primaryColor: Colors.white,
         scaffoldBackgroundColor: bgWhite,
         cardColor: cardWhite,
         textTheme: GoogleFonts.outfitTextTheme(
@@ -47,7 +47,7 @@ class BizIdeasApp extends StatelessWidget {
           displayColor: const Color(0xFF000000),
         ),
         colorScheme: ColorScheme.light(
-          primary: primaryGold,
+          primary: neonPink,
           secondary: neonPink,
           surface: cardWhite,
           background: bgWhite,

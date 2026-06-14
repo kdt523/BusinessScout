@@ -254,7 +254,7 @@ const showStaticMapFallback = () => {
         zones.forEach((zone, idx) => {
             const zLat = zone.lat || lat;
             const zLng = zone.lng || lng;
-            const color = idx === 0 ? 'ff187f' : 'ecc870';
+            const color = idx === 0 ? 'ff187f' : '111111';
             pins.push(`pin-l-shop+\${color}(\${zLng},\${zLat})`);
         });
     } else {
@@ -311,7 +311,7 @@ if (typeof mapboxgl === 'undefined') {
                 const zLat = zone.lat || lat;
                 const zLng = zone.lng || lng;
                 const isBest = idx === 0;
-                const pinColor = isBest ? '#FF187F' : '#ECC870';
+                const pinColor = isBest ? '#FF187F' : '#111111';
                 
                 // Create Custom Store Pin HTML Element
                 const el = document.createElement('div');
@@ -438,7 +438,7 @@ if (typeof mapboxgl === 'undefined') {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFECC870).withOpacity(0.4), width: 1.5),
+        border: Border.all(color: const Color(0xFF111111).withOpacity(0.15), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),

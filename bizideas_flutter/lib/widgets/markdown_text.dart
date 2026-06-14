@@ -24,7 +24,7 @@ class MarkdownText extends StatelessWidget {
         children.add(Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Divider(
-              color: const Color(0xFFECC870).withOpacity(0.3), height: 1),
+              color: const Color(0xFF111111).withOpacity(0.15), height: 1),
         ));
         continue;
       }

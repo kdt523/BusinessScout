@@ -31,7 +31,7 @@ class ScoutingResultsDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryGold = Color(0xFFECC870);
+    const primaryGold = Color(0xFF111111);
     const neonPink = Color(0xFFFF187F);
 
     if (zones.isEmpty) {
@@ -325,7 +325,7 @@ class ScoutingResultsDashboard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.calendar_today_outlined,
-                  color: Color(0xFFC59F4A), size: 14),
+                  color: Colors.black, size: 14),
               const SizedBox(width: 6),
               Text(
                 "LOCAL EVENTS & SEASONAL PEAKS",
@@ -340,7 +340,7 @@ class ScoutingResultsDashboard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF9F7F3),
+                  color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: primaryGold.withOpacity(0.3),
@@ -419,7 +419,7 @@ class ScoutingResultsDashboard extends StatelessWidget {
                               child: Text(
                                 period.toString().toUpperCase(),
                                 style: const TextStyle(
-                                  color: Color(0xFFECC870),
+                                  color: Colors.white,
                                   fontSize: 6.5,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -476,7 +476,7 @@ class ScoutingResultsDashboard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.description_outlined,
-                  color: Color(0xFFC59F4A), size: 16),
+                  color: Colors.black, size: 16),
               const SizedBox(width: 6),
               Text(
                 "STRATEGIC FEASIBILITY PLAN",
@@ -501,7 +501,7 @@ class ScoutingResultsDashboard extends StatelessWidget {
             _buildPlanSection(
               title: "Unique Value Proposition",
               content: planDetails['uvp'].toString(),
-              accentColor: const Color(0xFFC59F4A),
+              accentColor: Colors.black,
             ),
             const SizedBox(height: 12),
           ],

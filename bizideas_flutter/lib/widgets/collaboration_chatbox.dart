@@ -153,11 +153,11 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
       case "Orchestrator":
         return const Color(0xFFFF187F);
       case "Location Scout":
-        return const Color(0xFFC59F4A);
+        return const Color(0xFF111111);
       case "Competitor Analyst":
         return const Color(0xFF111111);
       case "Business Planner":
-        return const Color(0xFFECC870);
+        return const Color(0xFFFF187F);
       default:
         return Colors.grey;
     }
@@ -206,12 +206,13 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFFECC870).withOpacity(0.3),
+              border: Border.all(
+                color: const Color(0xFF111111).withOpacity(0.15),
                 width: 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFECC870).withOpacity(0.06),
+                  color: Colors.black.withOpacity(0.015),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 )
@@ -399,12 +400,12 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
         decoration: BoxDecoration(
           color: isOrchestration
               ? const Color(0xFF111111)
-              : const Color(0xFFF9F7F3),
+              : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isOrchestration
                 ? const Color(0xFFFF187F).withOpacity(0.55)
-                : const Color(0xFFECC870).withOpacity(0.25),
+                : const Color(0xFF111111).withOpacity(0.12),
             width: 0.8,
           ),
         ),
@@ -416,7 +417,7 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
                   : Icons.info_outline,
               color: isOrchestration
                   ? const Color(0xFFFF187F)
-                  : const Color(0xFFECC870),
+                  : Colors.black,
               size: 13,
             ),
             const SizedBox(width: 8),
@@ -472,7 +473,7 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
             border: Border.all(
               color: isExpanded
                   ? agentColor.withOpacity(0.65)
-                  : const Color(0xFFECC870).withOpacity(0.25),
+                  : const Color(0xFF111111).withOpacity(0.12),
               width: isExpanded ? 1.2 : 0.8,
             ),
           ),
@@ -531,7 +532,7 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9F7F3),
+                      color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: agentColor.withOpacity(0.18)),
                     ),
@@ -579,10 +580,10 @@ class _CollaborationChatboxState extends State<CollaborationChatbox> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFAF8F5),
+                    color: const Color(0xFFFDFDFD),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFFECC870).withOpacity(0.2),
+                      color: const Color(0xFF111111).withOpacity(0.12),
                       width: 0.8,
                     ),
                   ),

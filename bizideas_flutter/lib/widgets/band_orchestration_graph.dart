@@ -29,11 +29,11 @@ class BandOrchestrationGraph extends StatelessWidget {
       case "Orchestrator":
         return const Color(0xFFFF187F);
       case "Location Scout":
-        return const Color(0xFFC59F4A);
+        return const Color(0xFF111111);
       case "Competitor Analyst":
         return const Color(0xFF111111);
       case "Business Planner":
-        return const Color(0xFFECC870);
+        return const Color(0xFFFF187F);
       default:
         return Colors.grey;
     }

@@ -186,7 +186,7 @@ class _ResearchReportScreenState extends State<ResearchReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryGold = const Color(0xFFECC870);
+    final primaryGold = const Color(0xFF111111);
     final neonPink = const Color(0xFFFF187F);
 
     if (_isLoading) {

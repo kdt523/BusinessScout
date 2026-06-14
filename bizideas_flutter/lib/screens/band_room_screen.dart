@@ -282,7 +282,7 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
   Widget build(BuildContext context) {
     final bgWhite = const Color(0xFFFDFDFD);
     final cardWhite = Colors.white;
-    final primaryGold = const Color(0xFFECC870);
+    final primaryGold = const Color(0xFF111111);
     final neonPink = const Color(0xFFFF187F);
 
     return ResponsiveWebWrapper(
@@ -393,7 +393,7 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F7F3),
+        color: const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: primaryGold.withOpacity(0.3), width: 1.0),
       ),
@@ -535,7 +535,7 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFECC870).withOpacity(0.3)),
+                          border: Border.all(color: const Color(0xFF111111).withOpacity(0.15)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.02),
@@ -563,7 +563,7 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     _messages.isNotEmpty
-                                        ? _messages.last.content
+                                        ? "@$_currentAgent: $_statusMessage"
                                         : "Waiting for room stream...",
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
@@ -741,11 +741,11 @@ class _BandRoomScreenState extends State<BandRoomScreen> {
       case "Orchestrator":
         return const Color(0xFFFF187F);
       case "Location Scout":
-        return const Color(0xFFC59F4A);
+        return const Color(0xFF111111);
       case "Competitor Analyst":
         return const Color(0xFF111111);
       case "Business Planner":
-        return const Color(0xFFECC870);
+        return const Color(0xFFFF187F);
       default:
         return Colors.grey;
     }

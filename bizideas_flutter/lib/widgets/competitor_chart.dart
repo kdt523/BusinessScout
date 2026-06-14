@@ -36,7 +36,7 @@ class CompetitorChart extends StatelessWidget {
 
           final Color scoreColor = index == 0
               ? const Color(0xFFFF187F) // Neon Pink for rank 1
-              : const Color(0xFFECC870); // Light Gold for others
+              : const Color(0xFF111111); // Black for others
 
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -45,7 +45,7 @@ class CompetitorChart extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: index == 0 ? const Color(0xFFFF187F).withOpacity(0.4) : const Color(0xFFECC870).withOpacity(0.25),
+                color: index == 0 ? const Color(0xFFFF187F).withOpacity(0.4) : const Color(0xFF111111).withOpacity(0.15),
                 width: index == 0 ? 1.5 : 1.0,
               ),
               boxShadow: [
@@ -63,7 +63,7 @@ class CompetitorChart extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: index == 0 ? const Color(0x0FFF187F) : const Color(0x0FECC870),
+                    color: index == 0 ? const Color(0x0FFF187F) : const Color(0xFF111111).withOpacity(0.06),
                     shape: BoxShape.circle,
                     border: Border.all(color: scoreColor, width: 2),
                   ),
@@ -74,7 +74,7 @@ class CompetitorChart extends StatelessWidget {
                       Text(
                         oppScore.toStringAsFixed(1),
                         style: TextStyle(
-                          color: index == 0 ? const Color(0xFFFF187F) : const Color(0xFFC59F4A),
+                          color: index == 0 ? const Color(0xFFFF187F) : const Color(0xFF111111),
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -114,7 +114,7 @@ class CompetitorChart extends StatelessWidget {
                               color: saturation >= 7.0 
                                   ? const Color(0xFFFF187F) 
                                   : saturation >= 4.0 
-                                      ? const Color(0xFFC59F4A) 
+                                      ? const Color(0xFF111111) 
                                       : const Color(0xFF10B981),
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -140,7 +140,7 @@ class CompetitorChart extends StatelessWidget {
                               child: LinearProgressIndicator(
                                 value: traffic / 10.0,
                                 backgroundColor: const Color(0xFFF1F1F1),
-                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFECC870)),
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF111111)),
                                 minHeight: 6,
                               ),
                             ),
@@ -174,7 +174,7 @@ class CompetitorChart extends StatelessWidget {
                                   saturation >= 7.0 
                                       ? const Color(0xFFFF187F) 
                                       : saturation >= 4.0 
-                                          ? const Color(0xFFECC870) 
+                                          ? const Color(0xFF111111) 
                                           : const Color(0xFF10B981)
                                 ),
                                 minHeight: 6,

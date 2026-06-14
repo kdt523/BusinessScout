@@ -119,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final bgWhite = const Color(0xFFFDFDFD);
-    final primaryGold = const Color(0xFFECC870);
+    final primaryGold = const Color(0xFF111111);
     final neonPink = const Color(0xFFFF187F);
 
     return ResponsiveWebWrapper(
@@ -490,7 +490,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-            color: const Color(0xFFECC870).withOpacity(0.2), width: 1.0),
+            color: const Color(0xFF111111).withOpacity(0.2), width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.015),
