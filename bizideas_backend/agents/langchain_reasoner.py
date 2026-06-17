@@ -74,7 +74,8 @@ class LangChainReasoner:
             api_key = featherless_key
             self._model_code = os.getenv("FEATHERLESS_MODEL", "Qwen/Qwen2.5-7B-Instruct")
             self._provider_label = "Featherless AI (via LangChain)"
-            self._model_label = "Qwen 2.5"
+            from agents.base import featherless_model_label
+            self._model_label = featherless_model_label(self._model_code)
         elif openai_key:
             base_url = None
             api_key = openai_key

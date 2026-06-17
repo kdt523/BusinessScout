@@ -8,6 +8,25 @@ load_dotenv()
 
 logger = logging.getLogger("BaseAgent")
 
+
+def featherless_model_label(model_code: Optional[str] = None) -> str:
+    """Derive a human-friendly display label from the Featherless model code.
+
+    Keeps the chatbox/diagnostics in sync with whatever FEATHERLESS_MODEL is set
+    to in .env, instead of hardcoding a specific Qwen version.
+    """
+    code = model_code or os.getenv("FEATHERLESS_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
+    # Strip the org prefix (e.g. "Qwen/Qwen3.6-35B-A3B" -> "Qwen3.6-35B-A3B").
+    name = code.split("/")[-1]
+    # Insert a space after the leading vendor word for readability
+    # ("Qwen3.6-35B-A3B" -> "Qwen 3.6-35B-A3B").
+    import re
+    match = re.match(r"^([A-Za-z]+)(\d.*)$", name)
+    if match:
+        return f"{match.group(1)} {match.group(2)}"
+    return name
+
+
 class BaseAgent:
     def __init__(self, name: str, role: str):
         self.name = name
@@ -53,22 +72,6 @@ class BaseAgent:
                     base_url="https://api.featherless.ai/v1",
                     max_retries=0
                 )
-                logger.info(f"[{self.name}] Featherless Client initialized.")
-            except Exception as e:
-                logger.error(f"Failed to initialize Featherless: {e}")
-
-        # Initialize Gemini client if key is present
-        if self.gemini_key:
-            try:
-                from google import genai
-                self.gemini_client = genai.Client(api_key=self.gemini_key)
-                logger.info(f"[{self.name}] Gemini Client initialized.")
-            except Exception as e:
-                logger.error(f"Failed to initialize Gemini Client: {e}")
-
-        # Initialize Anthropic client if key is present
-        if self.anthropic_key:
-            try:
                 logger.info(f"[{self.name}] Featherless Client initialized.")
             except Exception as e:
                 logger.error(f"Failed to initialize Featherless: {e}")
@@ -146,7 +149,7 @@ class BaseAgent:
                             model=model_name,
                             messages=messages,
                             temperature=0.7,
-                            timeout=10.0
+                            timeout=45.0
                         )
                         return response.choices[0].message.content
                     result = await asyncio.to_thread(_call)
@@ -180,7 +183,7 @@ class BaseAgent:
                             model=model_name,
                             messages=messages,
                             temperature=0.7,
-                            timeout=10.0
+                            timeout=45.0
                         )
                         return response.choices[0].message.content
                     result = await asyncio.to_thread(_call)
@@ -189,7 +192,7 @@ class BaseAgent:
                     output_toks = len(result) // 4 + 10
                     self.last_call_diagnostics = {
                         "provider": "Featherless AI",
-                        "model": "Qwen 2.5 VL",
+                        "model": featherless_model_label(model_name),
                         "model_code": model_name,
                         "latency_sec": round(latency, 2),
                         "input_tokens": input_toks,
@@ -276,7 +279,7 @@ class BaseAgent:
                         model=model_name,
                         messages=messages,
                         temperature=0.7,
-                        timeout=10.0
+                        timeout=45.0
                     )
                     result = response.choices[0].message.content
                     latency = time.time() - start_time
@@ -299,8 +302,8 @@ class BaseAgent:
         # Fallback diagnostics if no client generated content
         self.last_call_diagnostics = {
             "provider": "AI/ML API Fallback" if self.name in ["Orchestrator", "Competitor Analyst"] else "Featherless Fallback",
-            "model": "DeepSeek V4 Flash (Simulated)" if self.name in ["Orchestrator", "Competitor Analyst"] else "Qwen 2.5 VL (Simulated)",
-            "model_code": "deepseek-v4-flash" if self.name in ["Orchestrator", "Competitor Analyst"] else "Qwen/Qwen2.5-VL-7B-Instruct",
+            "model": "DeepSeek V4 Flash (Simulated)" if self.name in ["Orchestrator", "Competitor Analyst"] else f"{featherless_model_label()} (Simulated)",
+            "model_code": "deepseek-v4-flash" if self.name in ["Orchestrator", "Competitor Analyst"] else os.getenv("FEATHERLESS_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct"),
             "latency_sec": 0.45 if self.name in ["Orchestrator", "Competitor Analyst"] else 0.55,
             "input_tokens": len(prompt) // 4 + 10,
             "output_tokens": len(prompt) // 3 + 40,

@@ -26,6 +26,8 @@ class BrightDataClient:
     def __init__(self):
         self.api_key = os.getenv("BRIGHTDATA_API_KEY")
         self.zone_name = os.getenv("BRIGHTDATA_ZONE_NAME") or ""
+        self.web_unlocker_zone = os.getenv("BRIGHTDATA_WEB_UNLOCKER_ZONE") or ""
+        self.web_unlocker_password = os.getenv("BRIGHTDATA_WEB_UNLOCKER_PASSWORD") or ""
         self.last_serp_error = None
         self.last_diagnostics = {
             "provider": "Bright Data",
@@ -72,19 +74,28 @@ class BrightDataClient:
         self.customer_id = os.getenv("BRIGHTDATA_CUSTOMER_ID")
         self.password = os.getenv("BRIGHTDATA_ZONE_PASSWORD")
         self.proxy_host = os.getenv("BRIGHTDATA_PROXY_HOST", "brd.superproxy.io")
-        self.proxy_port = os.getenv("BRIGHTDATA_PROXY_PORT", "22225")
+        self.proxy_port = os.getenv("BRIGHTDATA_PROXY_PORT", "33335")
 
+        # SERP API proxy URL
         self.proxy_url = None
         if self.customer_id and self.password and self.zone_name:
             # Bright Data proxy auth format: brd-customer-<id>-zone-<zone>:<password>
             proxy_user = f"brd-customer-{self.customer_id}-zone-{self.zone_name}"
             self.proxy_url = f"http://{proxy_user}:{self.password}@{self.proxy_host}:{self.proxy_port}"
+            
+        # Web Unlocker proxy URL (for scraping dynamic content)
+        self.unlocker_proxy_url = None
+        if self.customer_id and self.web_unlocker_password and self.web_unlocker_zone:
+            unlocker_user = f"brd-customer-{self.customer_id}-zone-{self.web_unlocker_zone}"
+            self.unlocker_proxy_url = f"http://{unlocker_user}:{self.web_unlocker_password}@{self.proxy_host}:{self.proxy_port}"
 
         if self.proxy_url:
-            logger.info("Bright Data client initialized with proxy zone '%s'.", self.zone_name)
-        elif self.api_key:
-            logger.info("Bright Data client initialized with API Key for direct SERP requests.")
-        else:
+            logger.info("Bright Data client initialized with SERP API zone '%s'.", self.zone_name)
+        if self.unlocker_proxy_url:
+            logger.info("Bright Data client initialized with Web Unlocker zone '%s'.", self.web_unlocker_zone)
+        if self.api_key:
+            logger.info("Bright Data client initialized with API Key for direct API requests.")
+        if not (self.proxy_url or self.unlocker_proxy_url or self.api_key):
             logger.warning("Bright Data credentials missing in .env. Live web evidence will be unavailable.")
 
     async def _resolve_zone_name(self) -> str | None:
@@ -157,45 +168,47 @@ class BrightDataClient:
 
     def _parse_serp_json(self, data: Any) -> List[Dict[str, Any]]:
         """
-        Parses structured SERP JSON results returned by Bright Data.
-        Supports both 'organic' and 'organic_results' arrays.
+        Parses structured SERP JSON results returned by Bright Data (brd_json=1).
+        Returns generic organic result dicts with title/link/url/description/snippet
+        so every caller (competitors, registration, demographics, land, events)
+        can consume them uniformly. Does NOT reshape into event-specific fields.
         """
         if not isinstance(data, dict):
             logger.debug("Bright Data response is not a JSON object/dict.")
             return []
-            
+
         results = None
-        if "organic" in data and isinstance(data["organic"], list):
-            results = data["organic"]
-        elif "organic_results" in data and isinstance(data["organic_results"], list):
-            results = data["organic_results"]
-        elif "results" in data and isinstance(data["results"], list):
-            results = data["results"]
-            
+        for key in ("organic", "organic_results", "results"):
+            if isinstance(data.get(key), list) and data[key]:
+                results = data[key]
+                break
+
         if not results:
             logger.warning("No organic search results found in Bright Data JSON response.")
             return []
-            
-        parsed_events = []
-        for res in results[:3]:
-            title = res.get("title") or res.get("name") or "Local Event"
-            snippet = res.get("description") or res.get("snippet") or res.get("text") or "Local activity details"
-            
-            # Simple heuristics to extract approximate period
-            period = "Annual / Seasonal"
-            for month in ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]:
-                if month.lower() in snippet.lower() or month.lower() in title.lower():
-                    period = month
-                    break
-                    
-            parsed_events.append({
+
+        parsed = []
+        for res in results:
+            if not isinstance(res, dict):
+                continue
+            title = res.get("title") or res.get("name") or ""
+            snippet = (
+                res.get("description") or res.get("snippet")
+                or res.get("text") or res.get("desc") or ""
+            )
+            url = res.get("link") or res.get("url") or res.get("display_link") or ""
+            if not (title or snippet):
+                continue
+            parsed.append({
+                "title": title,
                 "name": title,
-                "period": period,
-                "impact": snippet,
-                "type": "Live Event Research"
+                "link": url,
+                "url": url,
+                "description": snippet,
+                "snippet": snippet,
             })
-            
-        return parsed_events
+
+        return parsed
 
     def _extract_serp_results(self, data: Any) -> List[Dict[str, Any]]:
         if not isinstance(data, dict):
@@ -235,38 +248,125 @@ class BrightDataClient:
     async def _unlocker_fetch(self, target_url: str) -> str | None:
         """
         Fetch a URL's raw HTML through the Bright Data Web Unlocker API request
-        endpoint (zone is IP-whitelisted to the VPS). Returns HTML or None.
+        endpoint or proxy. Returns HTML or None.
         """
-        if not (self.api_key and self.zone_name):
-            return None
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    "https://api.brightdata.com/request",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={"zone": self.zone_name, "url": target_url, "format": "raw"},
-                )
-            if response.status_code == 200:
-                self.last_serp_error = None
-                return response.text
-            self.last_serp_error = f"unlocker_status_{response.status_code}"
-            logger.error(f"Bright Data Web Unlocker returned {response.status_code}: {response.text[:200]}")
-        except Exception as e:
-            self.last_serp_error = "unlocker_error"
-            logger.error(f"Bright Data Web Unlocker request failed: {e}")
+        # Method 1: Use API request endpoint (preferred if API key is available)
+        if self.api_key and self.web_unlocker_zone:
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(
+                        "https://api.brightdata.com/request",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={"zone": self.web_unlocker_zone, "url": target_url, "format": "raw"},
+                    )
+                if response.status_code == 200:
+                    self.last_serp_error = None
+                    logger.info(f"Bright Data Web Unlocker (API) fetched: {target_url[:80]}...")
+                    return response.text
+                self.last_serp_error = f"unlocker_api_status_{response.status_code}"
+                logger.error(f"Bright Data Web Unlocker API returned {response.status_code}: {response.text[:200]}")
+            except Exception as e:
+                self.last_serp_error = "unlocker_api_error"
+                logger.error(f"Bright Data Web Unlocker API request failed: {e}")
+        
+        # Method 2: Use proxy endpoint (if proxy URL is configured)
+        if self.unlocker_proxy_url:
+            try:
+                async with httpx.AsyncClient(
+                    proxies={"http://": self.unlocker_proxy_url, "https://": self.unlocker_proxy_url},
+                    timeout=60.0
+                ) as client:
+                    response = await client.get(target_url)
+                if response.status_code == 200:
+                    self.last_serp_error = None
+                    logger.info(f"Bright Data Web Unlocker (Proxy) fetched: {target_url[:80]}...")
+                    return response.text
+                self.last_serp_error = f"unlocker_proxy_status_{response.status_code}"
+                logger.error(f"Bright Data Web Unlocker Proxy returned {response.status_code}")
+            except Exception as e:
+                self.last_serp_error = "unlocker_proxy_error"
+                logger.error(f"Bright Data Web Unlocker Proxy request failed: {e}")
+        
         return None
 
     async def _query_serp(self, query: str, market_profile: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
+        """
+        Query search engines using Bright Data SERP API for structured results.
+        Falls back to DuckDuckGo HTML scraping if SERP API is unavailable.
+        """
         market_profile = market_profile or {}
-        ddg_url = "https://html.duckduckgo.com/html/?" + urlencode({"q": query})
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        country_code = str(market_profile.get("country_code") or "US").lower()
+        language_code = str(market_profile.get("language_code") or "en").lower()
+        
+        # Method 1: Bright Data SERP API (primary method - returns structured JSON)
+        if self.api_key and self.zone_name:
+            try:
+                # The query MUST be URL-encoded. Raw spaces, quotes, and SERP
+                # operators (e.g. site:, "...") otherwise produce a malformed
+                # Google URL that Bright Data rejects with HTTP 400.
+                # The query MUST be URL-encoded, and we append brd_json=1 so
+                # Bright Data returns structured SERP JSON (organic results)
+                # instead of raw Google HTML, which is far more reliable to parse.
+                from urllib.parse import quote_plus
+                google_url = (
+                    f"https://www.google.com/search?q={quote_plus(query)}"
+                    f"&gl={country_code}&hl={language_code}&brd_json=1"
+                )
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(
+                        "https://api.brightdata.com/request",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "zone": self.zone_name,
+                            "url": google_url,
+                            "format": "raw",  # body is required by the API
+                        },
+                    )
 
-        # Method 1: DuckDuckGo HTML via Bright Data Web Unlocker (live, reliable).
+                if response.status_code == 200:
+                    # Try to parse as JSON first (structured SERP results).
+                    # With brd_json=1 the body is JSON; some plans wrap it in a
+                    # {"body": "<json string>"} envelope, so unwrap that too.
+                    try:
+                        data = response.json()
+                        if isinstance(data, dict) and isinstance(data.get("body"), str):
+                            import json as _json
+                            try:
+                                data = _json.loads(data["body"])
+                            except Exception:
+                                pass
+                        results = self._parse_serp_json(data)
+                        if results:
+                            logger.info(f"Bright Data SERP API retrieved {len(results)} structured results for: {query}")
+                            self.last_serp_error = None
+                            return results
+                    except Exception:
+                        pass  # Fall through to HTML parsing
+
+                    # If JSON parsing fails, try HTML parsing
+                    html = response.text
+                    results = self._parse_google_html(html)
+                    if results:
+                        logger.info(f"Bright Data SERP API (HTML) retrieved {len(results)} results for: {query}")
+                        self.last_serp_error = None
+                        return results
+                    self.last_serp_error = "serp_api_empty_results"
+                    logger.warning(f"Bright Data SERP API returned 200 but no parseable results for: {query}")
+                else:
+                    self.last_serp_error = f"serp_api_status_{response.status_code}"
+                    logger.warning(f"Bright Data SERP API returned {response.status_code}: {response.text[:200]}")
+            except Exception as e:
+                self.last_serp_error = "serp_api_error"
+                logger.error(f"Bright Data SERP API request failed: {e}")
+
+        # Method 2: DuckDuckGo HTML via Bright Data Web Unlocker (live, reliable)
+        ddg_url = "https://html.duckduckgo.com/html/?" + urlencode({"q": query})
         html = await self._unlocker_fetch(ddg_url)
         if html:
             results = self._parse_duckduckgo_html(html)
@@ -274,7 +374,10 @@ class BrightDataClient:
                 logger.info(f"Bright Data Web Unlocker retrieved {len(results)} live results for: {query}")
                 return results
 
-        # Method 2: Direct DuckDuckGo (no proxy) as last-resort live source.
+        # Method 3: Direct DuckDuckGo (no proxy) as last-resort live source
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
         try:
             async with httpx.AsyncClient(timeout=12.0) as client:
                 response = await client.post("https://html.duckduckgo.com/html/", data={"q": query}, headers=headers)
@@ -287,6 +390,38 @@ class BrightDataClient:
             logger.error(f"Direct DuckDuckGo search failed: {e}")
 
         return []
+    
+    def _parse_google_html(self, html: str) -> List[Dict[str, Any]]:
+        """
+        Parse Google search results from HTML.
+        """
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        results = []
+        
+        # Google search results are in div elements with specific classes
+        for result in soup.select("div.g, div[data-sokoban-container]"):
+            # Find title link
+            title_elem = result.select_one("h3")
+            link_elem = result.select_one("a[href]")
+            snippet_elem = result.select_one("div[data-sncf], div.VwiC3b, span.aCOpRe")
+            
+            if title_elem and link_elem:
+                title = title_elem.get_text().strip()
+                url = link_elem.get("href") or ""
+                snippet = snippet_elem.get_text().strip() if snippet_elem else ""
+                
+                # Filter out unwanted URLs
+                if url and not any(skip in url for skip in ["google.com/search", "webcache.googleusercontent"]):
+                    results.append({
+                        "title": title,
+                        "link": url,
+                        "url": url,
+                        "description": snippet,
+                        "snippet": snippet,
+                    })
+        
+        return results
 
     def _result_text(self, result: Dict[str, Any]) -> str:
         return " ".join([
@@ -703,39 +838,94 @@ class BrightDataClient:
         business_type: str,
         market_profile: Dict[str, Any] | None = None,
     ) -> List[Dict[str, Any]]:
+        """
+        Research competitors by searching for actual business names (brand names)
+        in the target zone, not generic article titles. Returns real competitor
+        brand names and their details from live Bright Data SERP results.
+        
+        Uses highly targeted queries to find business directories, review sites,
+        and specific business listings rather than generic articles.
+        """
         market_profile = market_profile or {}
+        country_name = market_profile.get("country_name") or ""
         enriched_zones = []
         evidence_count = 0
 
         for zone in zones:
-            query = f"{business_type} competitors near {zone.get('name')} {city}"
-            results = await self._query_serp(query, market_profile)
-            competitors = []
+            zone_name = zone.get('name') or ''
+            
+            # TARGETED queries designed to return actual business listings, not articles
+            # These queries are optimized to find:
+            # 1. Business directory listings (Google Maps, Yelp, TripAdvisor)
+            # 2. Specific business names with addresses
+            # 3. Review sites that list actual businesses
+            queries = [
+                # Query 1: Google Maps/Business listings style
+                f"{business_type} {zone_name} {city} address phone",
+                # Query 2: Reviews/ratings (returns business names)
+                f"{business_type} {zone_name} {city} reviews ratings",
+                # Query 3: Directory/list style
+                f'"{business_type}" list directory {city} {zone_name}',
+                # Query 4: Specific business search
+                f'site:google.com/maps {business_type} {city} {zone_name}',
+                # Query 5: Alternative directory search
+                f'{business_type} near "{zone_name}" {city} {country_name}',
+                # Query 6: Business names with location
+                f'{business_type} brands names {city} {zone_name} location',
+            ]
+            
+            all_competitors = []
             seen = set()
-            for result in results[:10]:
-                title = result.get("title") or result.get("name") or ""
-                snippet = result.get("description") or result.get("snippet") or result.get("text") or ""
-                url = result.get("link") or result.get("url") or ""
-                normalized = re.sub(r"[^a-z0-9]+", "", title.lower())
-                if not title or normalized in seen:
-                    continue
-                seen.add(normalized)
-                competitors.append({
-                    "name": title[:90],
-                    "snippet": snippet[:220],
-                    "url": url,
-                    "source": "Bright Data Live Research",
-                })
+            
+            # Run queries in parallel for speed
+            tasks = [self._query_serp(query, market_profile) for query in queries]
+            all_results = await asyncio.gather(*tasks)
+            
+            for results in all_results:
+                for result in results[:12]:  # Check more results per query
+                    title = result.get("title") or result.get("name") or ""
+                    snippet = result.get("description") or result.get("snippet") or result.get("text") or ""
+                    url = result.get("link") or result.get("url") or ""
+                    
+                    # Try to extract brand name from BOTH title and snippet
+                    brand_names = []
+                    
+                    # Extract from title
+                    brand_from_title = self._extract_brand_name(title, business_type, city)
+                    if brand_from_title:
+                        brand_names.append(brand_from_title)
+                    
+                    # Also try to extract brand names mentioned in snippet
+                    # Look for patterns like: "Starbucks -", "Visit Bo's Coffee", etc.
+                    snippet_brands = self._extract_brands_from_snippet(snippet, business_type, city)
+                    brand_names.extend(snippet_brands)
+                    
+                    # Process each found brand name
+                    for brand_name in brand_names:
+                        if not brand_name:
+                            continue
+                        
+                        normalized = re.sub(r"[^a-z0-9]+", "", brand_name.lower())
+                        if normalized in seen or len(normalized) < 3:
+                            continue
+                        seen.add(normalized)
+                        
+                        all_competitors.append({
+                            "name": brand_name[:90],
+                            "snippet": snippet[:220],
+                            "url": url,
+                            "source": "Bright Data Live Research",
+                        })
 
             # No fabricated competitors: zero live results stays at zero.
-            comp_count = len(competitors)
+            comp_count = len(all_competitors)
             evidence_count += comp_count
 
             traffic_score = float(zone.get("traffic_score") or 0.0)
             if comp_count:
                 saturation = round(min(9.5, 1.8 + comp_count * 0.65), 1)
                 source = "Bright Data Live Research"
-                confidence = "medium" if comp_count >= 4 else "low"
+                confidence = "high" if comp_count >= 10 else ("medium" if comp_count >= 5 else "low")
             else:
                 saturation = 0.0
                 source = "Live research unavailable"
@@ -747,11 +937,11 @@ class BrightDataClient:
                 "competitor_count": comp_count,
                 "saturation_score": saturation,
                 "opp_score": opp_score,
-                "competitors": [item["name"] for item in competitors],
-                "competitor_evidence": competitors,
+                "competitors": [item["name"] for item in all_competitors],
+                "competitor_evidence": all_competitors,
                 "competitor_source": source,
                 "competitor_confidence": confidence,
-                "competitor_search_query": query,
+                "competitor_search_queries": queries[:3],  # Only show first 3 queries in output
             })
 
         enriched_zones.sort(key=lambda x: x.get("opp_score", 0), reverse=True)
@@ -767,6 +957,125 @@ class BrightDataClient:
             "competitor_evidence_count": evidence_count,
         }
         return enriched_zones
+    
+    def _extract_brands_from_snippet(self, snippet: str, business_type: str, city: str) -> List[str]:
+        """
+        Extract brand names mentioned in snippets.
+        Looks for patterns like "Visit [Brand Name]" or "[Brand Name] is located at"
+        """
+        if not snippet or len(snippet) < 10:
+            return []
+        
+        brands = []
+        
+        # Pattern 1: "[Name] -" or "[Name] |" or "[Name]:"
+        matches = re.findall(r"([A-Z][A-Za-z'\s&]+(?:[A-Z][a-z]+)*)\s*[-|:]", snippet)
+        for match in matches:
+            brand = self._extract_brand_name(match.strip(), business_type, city)
+            if brand and len(brand) > 3:
+                brands.append(brand)
+        
+        # Pattern 2: "Visit [Name]" or "Check out [Name]"
+        matches = re.findall(r"(?:visit|check out|try|discover|explore)\s+([A-Z][A-Za-z'\s&]+)", snippet, re.IGNORECASE)
+        for match in matches:
+            brand = self._extract_brand_name(match.strip(), business_type, city)
+            if brand and len(brand) > 3:
+                brands.append(brand)
+        
+        # Pattern 3: Quoted business names
+        matches = re.findall(r'"([A-Z][A-Za-z\'\s&]+)"', snippet)
+        for match in matches:
+            brand = self._extract_brand_name(match.strip(), business_type, city)
+            if brand and len(brand) > 3:
+                brands.append(brand)
+        
+        # Return unique brands only
+        return list(dict.fromkeys(brands))[:5]  # Max 5 brands from snippet
+    
+    def _extract_brand_name(self, title: str, business_type: str, city: str) -> str:
+        """
+        Extract actual business/brand names from search result titles.
+        Removes generic prefixes and filters out article-style titles.
+        ONLY returns real business names, not generic search titles.
+        """
+        if not title:
+            return ""
+        
+        original_title = title
+        
+        # STRICT filters - if ANY of these match, it's NOT a business name
+        strict_filters = [
+            # Article/Guide indicators
+            r"\b(guide|tips|advice|how to|what|where|when|why|things to)\b",
+            # List/Review indicators  
+            r"\b(best|top|most|popular|famous|leading|ultimate|complete)\s+\d",
+            r"^\d+\s+(best|top|most)",
+            # Generic location phrases
+            r"^(coffee shop|cafe|restaurant|retail|store|shop)\s+(in|near|around)",
+            r"\bin\s+" + re.escape(city),
+            # Question/informational
+            r"[?]",
+            r"\b(review|rating|handy|map|list)\b",
+            # Generic business type without actual name
+            r"^(coffee\s*shop|cafe|restaurant|retail\s*store)s?\s*(paris|" + re.escape(city.lower()) + r")",
+        ]
+        
+        title_lower = title.lower()
+        for pattern in strict_filters:
+            if re.search(pattern, title_lower):
+                return ""  # Filtered out - not a business name
+        
+        # Remove common prefixes/suffixes ONLY if they're followed by a proper name
+        clean_title = title
+        
+        # Remove review/rating suffixes
+        clean_title = re.sub(r"\s*[-–|:]\s*(review|reviews|rating|rated).*$", "", clean_title, flags=re.IGNORECASE)
+        
+        # Remove location suffixes (but only after capturing the name)
+        clean_title = re.sub(r"\s*[-–|:]\s*" + re.escape(city) + r".*$", "", clean_title, flags=re.IGNORECASE)
+        clean_title = re.sub(r",\s*" + re.escape(city) + r".*$", "", clean_title, flags=re.IGNORECASE)
+        
+        # Remove "in [city]" suffix
+        clean_title = re.sub(r"\s+in\s+" + re.escape(city) + r".*$", "", clean_title, flags=re.IGNORECASE)
+        
+        # Remove branch/location indicators
+        clean_title = re.sub(r"\s*[-–]\s*(branch|location|outlet).*$", "", clean_title, flags=re.IGNORECASE)
+        
+        clean_title = clean_title.strip(" -–|:,")
+        
+        # Additional validation: must look like a brand name
+        # Brand names typically:
+        # - Start with capital letter or number
+        # - Have at least 2 characters
+        # - Don't start with generic business type
+        
+        if len(clean_title) < 2:
+            return ""
+        
+        # Check if it's just the business type (e.g., "Coffee Shop", "Cafe")
+        if clean_title.lower() in [business_type.lower(), "coffee shop", "cafe", "restaurant", "retail", "store"]:
+            return ""
+        
+        # If it's suspiciously long (>80 chars), likely an article
+        if len(clean_title) > 80:
+            # Try to extract first segment before separator
+            parts = re.split(r"\s*[-–|:]\s*", clean_title)
+            if parts and len(parts[0]) > 2:
+                clean_title = parts[0].strip()
+            else:
+                return ""
+        
+        # Must contain letters (not just symbols/numbers)
+        if not re.search(r"[a-zA-Z]{2,}", clean_title):
+            return ""
+        
+        # Final check: if it contains too many generic words, skip it
+        generic_words = ["shopping", "pedestrian", "click", "specialty", "irresistible", "spots", "saying", "people", "discount", "coupons", "tourists", "visiting"]
+        word_count = sum(1 for word in generic_words if word in clean_title.lower())
+        if word_count >= 2:
+            return ""
+        
+        return clean_title
 
     def _parse_price(self, text: str, market_profile: Dict[str, Any]) -> int | None:
         if not text:
